@@ -147,3 +147,23 @@
   to { opacity: 1; transform: translateY(0); }
 }
 .animate-fade-up { animation: fade-up 0.7s ease-out both; }
+
+/* Page Loader Animations */
+@keyframes grow-bar {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.35); }
+}
+.loader-bar {
+  transform-origin: bottom;
+  fill: currentColor;
+  animation: grow-bar 1.1s ease-in-out infinite;
+}
+
+@keyframes shimmer-move {
+  0% { transform: translateX(-120px); }
+  100% { transform: translateX(120px); }
+}
+.shimmer-sweep {
+  animation: shimmer-move 1.8s linear infinite;
+}
+
