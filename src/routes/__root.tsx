@@ -107,12 +107,14 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
+import { PageLoader } from "@/components/site/PageLoader";
 import { Toaster } from "@/components/ui/sonner";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
+      <PageLoader />
       <div className="flex min-h-screen flex-col">
         <Header />
         <main className="flex-1"><Outlet /></main>
