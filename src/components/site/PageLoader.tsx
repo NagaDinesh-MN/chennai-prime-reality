@@ -22,16 +22,37 @@ function BuildingBars() {
 
 export function PageLoader() {
   const router = useRouter();
-  const isPending = router.state.status === "pending";
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    if (isPending) {
-      const timer = setTimeout(() => setShow(true), 120);
-      return () => clearTimeout(timer);
-    }
-    setShow(false);
-  }, [isPending]);
+    let hideTimer: ReturnType<typeof setTimeout> | null = null;
+    let shownAt = 0;
+    const MIN_DURATION = 900;
+
+    const unsubBefore = router.subscribe("onBeforeNavigate", () => {
+      if (hideTimer) {
+        clearTimeout(hideTimer);
+        hideTimer = null;
+      }
+      shownAt = Date.now();
+      setShow(true);
+    });
+
+    const finish = () => {
+      const elapsed = Date.now() - shownAt;
+      const remaining = Math.max(0, MIN_DURATION - elapsed);
+      hideTimer = setTimeout(() => setShow(false), remaining);
+    };
+    const unsubResolved = router.subscribe("onResolved", finish);
+    const unsubLoad = router.subscribe("onLoad", finish);
+
+    return () => {
+      if (hideTimer) clearTimeout(hideTimer);
+      unsubBefore();
+      unsubResolved();
+      unsubLoad();
+    };
+  }, [router]);
 
   return (
     <div
