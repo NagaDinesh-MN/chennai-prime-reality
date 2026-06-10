@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { CheckCircle2, Phone, Mail } from "lucide-react";
 
 const schema = z.object({
   name: z.string().trim().min(2, "Name is required").max(80),
@@ -12,10 +13,11 @@ const schema = z.object({
   message: z.string().trim().max(800).optional(),
 });
 
+const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1514320703699030046/6qAjvN0_77MMkN4RFokN75ZbCBHLUm_ZTaELLfzrrNePW7QGQUt0fihvEU_yD18nxub8";
+
 export function EnquiryForm({ compact = false }: { compact?: boolean }) {
   const [loading, setLoading] = useState(false);
-
-  const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1514320703699030046/6qAjvN0_77MMkN4RFokN75ZbCBHLUm_ZTaELLfzrrNePW7QGQUt0fihvEU_yD18nxub8";
+  const [success, setSuccess] = useState<null | { name: string; email: string }>(null);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -55,13 +57,50 @@ export function EnquiryForm({ compact = false }: { compact?: boolean }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      toast.success("Thank you! Our advisor will reach out within 24 hours.");
+      toast.success("Enquiry sent successfully!");
       form.reset();
+      setSuccess({ name: d.name, email: d.email });
     } catch {
       toast.error("Could not send enquiry. Please try again or call us directly.");
     } finally {
       setLoading(false);
     }
+  }
+
+  if (success) {
+    return (
+      <div className="relative overflow-hidden rounded-xl border border-gold/40 bg-card p-8 text-center animate-fade-up">
+        <div className="absolute inset-x-0 top-0 h-1" style={{ background: "var(--gradient-gold)" }} />
+        <div className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-full bg-gold/15 ring-4 ring-gold/20">
+          <CheckCircle2 className="h-9 w-9 text-gold" strokeWidth={2.25} />
+        </div>
+        <h3 className="mt-5 font-display text-2xl md:text-3xl text-navy">
+          Thank you, {success.name.split(" ")[0]}!
+        </h3>
+        <p className="mt-3 text-muted-foreground max-w-md mx-auto leading-relaxed">
+          Your enquiry has been received. A dedicated advisor from Chennai Prime Realty
+          will reach out within <span className="font-semibold text-foreground">24 hours</span>
+          {" "}with curated property options matching your requirements.
+        </p>
+        <div className="mt-6 flex flex-col sm:flex-row gap-3 items-center justify-center text-sm">
+          <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/70">
+            <Mail className="h-3.5 w-3.5 text-gold" />
+            <span className="text-foreground/80">Confirmation to {success.email}</span>
+          </span>
+          <a href="tel:+919840012345" className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/70 hover:bg-secondary transition">
+            <Phone className="h-3.5 w-3.5 text-gold" />
+            <span className="text-foreground/80">Or call +91 98400 12345</span>
+          </a>
+        </div>
+        <button
+          type="button"
+          onClick={() => setSuccess(null)}
+          className="mt-7 btn-outline-gold"
+        >
+          Submit Another Enquiry
+        </button>
+      </div>
+    );
   }
 
   return (
