@@ -15,20 +15,53 @@ const schema = z.object({
 export function EnquiryForm({ compact = false }: { compact?: boolean }) {
   const [loading, setLoading] = useState(false);
 
-  function onSubmit(e: FormEvent<HTMLFormElement>) {
+  const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1514320703699030046/6qAjvN0_77MMkN4RFokN75ZbCBHLUm_ZTaELLfzrrNePW7QGQUt0fihvEU_yD18nxub8";
+
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const fd = new FormData(form);
     const parsed = schema.safeParse(Object.fromEntries(fd));
     if (!parsed.success) {
       toast.error(parsed.error.issues[0].message);
       return;
     }
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    const d = parsed.data;
+    const payload = {
+      username: "Chennai Prime Realty",
+      embeds: [
+        {
+          title: "New Property Enquiry",
+          color: 0xc9a961,
+          fields: [
+            { name: "Name", value: d.name, inline: true },
+            { name: "Phone", value: d.phone, inline: true },
+            { name: "Email", value: d.email, inline: false },
+            { name: "Property Type", value: d.propertyType, inline: true },
+            { name: "Preferred Location", value: d.location, inline: true },
+            { name: "Budget", value: d.budget, inline: true },
+            { name: "Message", value: d.message?.trim() ? d.message : "—", inline: false },
+          ],
+          timestamp: new Date().toISOString(),
+          footer: { text: "Chennai Prime Realty • Website Lead" },
+        },
+      ],
+    };
+    try {
+      await fetch(DISCORD_WEBHOOK_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
       toast.success("Thank you! Our advisor will reach out within 24 hours.");
-      (e.target as HTMLFormElement).reset();
-    }, 700);
+      form.reset();
+    } catch {
+      toast.error("Could not send enquiry. Please try again or call us directly.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
