@@ -51,11 +51,15 @@ export function EnquiryForm({ compact = false }: { compact?: boolean }) {
       ],
     };
     try {
+      // Use multipart/form-data with payload_json — works under no-cors
+      // (application/json is blocked by the browser in no-cors mode and
+      // would cause Discord to silently reject the request).
+      const body = new FormData();
+      body.append("payload_json", JSON.stringify(payload));
       await fetch(DISCORD_WEBHOOK_URL, {
         method: "POST",
         mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body,
       });
       toast.success("Enquiry sent successfully!");
       form.reset();
