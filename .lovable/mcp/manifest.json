@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "sdk_version": "0.24.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "none"
+  },
+  "mcp": {
+    "server": {
+      "name": "chennai-prime-realty-mcp",
+      "version": "0.1.0",
+      "title": "Chennai Prime Realty"
+    },
+    "tools": [
+      {
+        "name": "list_properties",
+        "title": "List properties",
+        "description": "List Chennai Prime Realty's public property listings. Optionally filter by category (Apartments, Villas, Plots, Commercial) and/or by location substring (e.g. OMR, ECR, Anna Nagar, Velachery, Porur, Adyar).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "category": {
+              "type": "string",
+              "enum": [
+                "Apartments",
+                "Villas",
+                "Plots",
+                "Commercial"
+              ],
+              "description": "Filter by property category."
+            },
+            "location": {
+              "type": "string",
+              "description": "Case-insensitive substring match on the location field."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "submit_enquiry",
+        "title": "Submit property enquiry",
+        "description": "Submit a property enquiry to Chennai Prime Realty. An advisor follows up within 24 hours. Same fields as the website contact form.",
+        "annotations": {
+          "readOnlyHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 80
+            },
+            "phone": {
+              "type": "string",
+              "pattern": "^[0-9+\\-\\s()]{7,15}$"
+            },
+            "email": {
+              "type": "string",
+              "format": "email",
+              "maxLength": 120
+            },
+            "propertyType": {
+              "type": "string",
+              "enum": [
+                "Apartment",
+                "Villa",
+                "Plot",
+                "Commercial"
+              ]
+            },
+            "location": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 80,
+              "description": "Preferred location in Chennai."
+            },
+            "budget": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 60,
+              "description": "Budget range, e.g. '₹1 Cr – ₹2 Cr'."
+            },
+            "message": {
+              "type": "string",
+              "maxLength": 800
+            }
+          },
+          "required": [
+            "name",
+            "phone",
+            "email",
+            "propertyType",
+            "location",
+            "budget"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
