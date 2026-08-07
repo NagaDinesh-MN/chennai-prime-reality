@@ -162,11 +162,12 @@ function BlogPage() {
       {/* Newsletter */}
       <section className="section bg-navy text-navy-foreground">
         <div className="container-px mx-auto max-w-3xl text-center">
-          <SectionHead
-            eyebrow="Stay Informed"
-            title="Chennai market insights, once a month."
-          />
-          <p className="-mt-6 text-navy-foreground/75">
+          <span className="eyebrow">Stay Informed</span>
+          <h2 className="mt-3 font-display text-3xl md:text-5xl leading-tight">
+            Chennai market insights, once a month.
+          </h2>
+          <p className="mt-4 text-navy-foreground/75">
+
             Join 4,200+ buyers, sellers and investors getting our monthly price-trend digest. No spam,
             unsubscribe anytime.
           </p>
