@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, CalendarDays, Clock, Mail, User } from "lucide-react";
-import { SectionHead } from "@/components/site/SectionHead";
 import {
   blogCategories,
   demoPosts,
