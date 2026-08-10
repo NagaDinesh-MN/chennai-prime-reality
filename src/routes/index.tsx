@@ -7,6 +7,7 @@ import { PropertyCard } from "@/components/site/PropertyCard";
 import { SectionHead } from "@/components/site/SectionHead";
 import { EnquiryForm } from "@/components/site/EnquiryForm";
 import { TestimonialCard, testimonials } from "@/components/site/Testimonials";
+import { LatestBlog } from "@/components/site/LatestBlog";
 
 export const Route = createFileRoute("/")({
   head: () => ({
