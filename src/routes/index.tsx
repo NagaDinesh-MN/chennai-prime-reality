@@ -134,6 +134,9 @@ function HomePage() {
         </div>
       </section>
 
+      {/* Latest Blog */}
+      <LatestBlog />
+
       {/* Lead form */}
       <section className="section container-px mx-auto max-w-7xl">
         <div className="grid lg:grid-cols-2 gap-12 items-start">
