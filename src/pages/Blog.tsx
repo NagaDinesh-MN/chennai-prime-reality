@@ -7,50 +7,12 @@ import {
   Search,
   User,
 } from "lucide-react";
-import { sanityClient } from "@/lib/sanityClient";
-import { blogCategories, demoPosts, formatBlogDate } from "@/data/blog";
+import { fetchBlogPosts } from "@/lib/blogQueries";
+import { blogCategories, formatBlogDate } from "@/data/blog";
 import type { BlogPost } from "@/types/blog";
 
-const blogPostsQuery = `*[_type == "post"] | order(publishedAt desc) {
-  _id,
-  title,
-  "slug": slug.current,
-  excerpt,
-  "image": mainImage.asset->url,
-  "category": categories[0]->title,
-  publishedAt,
-  "readTime": readTime,
-  "author": author->{ name },
-  featured
-}`;
-
-const demoFallback: BlogPost[] = demoPosts.map((post, index) => ({
-  _id: post.id,
-  title: post.title,
-  slug: post.slug,
-  excerpt: post.excerpt,
-  image: post.image,
-  category: post.category,
-  publishedAt: post.date,
-  readTime: post.readTime,
-  author: {
-    name: post.author,
-    initials: getInitials(post.author),
-  },
-  featured: index === 0,
-}));
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
-
 export default function BlogPage() {
-  const [posts, setPosts] = useState<BlogPost[]>(demoFallback);
+  const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState("");
@@ -58,28 +20,17 @@ export default function BlogPage() {
   useEffect(() => {
     let cancelled = false;
 
-    async function fetchPosts() {
-      try {
-        const result = await sanityClient.fetch<BlogPost[]>(blogPostsQuery);
-        if (!cancelled) {
-          const normalized = (result ?? []).map((post) => ({
-            ...post,
-            author: {
-              name: post.author?.name ?? "Chennai Prime Realty",
-              initials: getInitials(post.author?.name ?? "Chennai Prime Realty"),
-            },
-          }));
-          setPosts(normalized.length ? normalized : demoFallback);
-        }
-      } catch (err) {
+    fetchBlogPosts()
+      .then((normalized) => {
+        if (!cancelled) setPosts(normalized);
+      })
+      .catch((err) => {
         console.error("Failed to fetch blog posts from Sanity:", err);
-        if (!cancelled) setPosts(demoFallback);
-      } finally {
+      })
+      .finally(() => {
         if (!cancelled) setLoading(false);
-      }
-    }
+      });
 
-    fetchPosts();
     return () => {
       cancelled = true;
     };
