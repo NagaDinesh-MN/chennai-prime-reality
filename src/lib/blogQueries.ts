@@ -1,5 +1,6 @@
 import { sanityClient } from "@/lib/sanityClient";
 import { demoPosts } from "@/data/blog";
+import fallbackImage from "@/assets/hero-chennai.jpg";
 import type { BlogPost } from "@/types/blog";
 
 const blogPostsQuery = `*[_type == "post"] | order(publishedAt desc) {
@@ -51,12 +52,21 @@ function sortByDate(posts: BlogPost[]): BlogPost[] {
   });
 }
 
+function optimizeImage(url?: string): string {
+  if (!url) return fallbackImage;
+  if (!url.includes("cdn.sanity.io")) return url;
+  return `${url}?w=1200&fit=max&auto=format`;
+}
+
 export async function fetchBlogPosts(): Promise<BlogPost[]> {
   try {
     const result = await sanityClient.fetch<BlogPost[]>(blogPostsQuery);
     const normalized = (result ?? [])
       .map((post) => ({
         ...post,
+        image: optimizeImage(post.image),
+        category: post.category ?? "Market Trends",
+        readTime: post.readTime ?? "5 min read",
         author: {
           name: post.author?.name ?? "Chennai Prime Realty",
           initials: getInitials(post.author?.name ?? "Chennai Prime Realty"),
