@@ -1,5 +1,6 @@
 import { sanityClient } from "@/lib/sanityClient";
 import { demoPosts } from "@/data/blog";
+import fallbackImage from "@/assets/hero-chennai.jpg";
 import type { BlogPost } from "@/types/blog";
 
 const blogPostsQuery = `*[_type == "post"] | order(publishedAt desc) {
