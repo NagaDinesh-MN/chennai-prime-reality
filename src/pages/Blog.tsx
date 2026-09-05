@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import {
   ArrowRight,
   CalendarDays,
@@ -122,12 +123,16 @@ export default function BlogPage() {
             )}
 
             {featured && (
-              <article className="card-elegant grid lg:grid-cols-2 overflow-hidden">
+              <Link
+                to="/blog/$slug"
+                params={{ slug: featured.slug }}
+                className="card-elegant group grid lg:grid-cols-2 overflow-hidden transition-shadow hover:shadow-xl"
+              >
                 <div className="relative aspect-[16/10] lg:aspect-auto lg:min-h-[420px]">
                   <img
                     src={featured.image}
                     alt={featured.title}
-                    className="absolute inset-0 h-full w-full object-cover"
+                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     loading="eager"
                   />
                   <span className="absolute left-4 top-4 rounded-full bg-navy/85 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-navy-foreground">
@@ -143,22 +148,27 @@ export default function BlogPage() {
                     {featured.excerpt}
                   </p>
                   <PostMeta post={featured} className="mt-6" />
-                  <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-navy">
-                    Read Article <ArrowRight className="h-4 w-4 text-gold" />
+                  <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-navy group-hover:text-gold">
+                    Read Article <ArrowRight className="h-4 w-4 text-gold transition-transform group-hover:translate-x-1" />
                   </span>
                 </div>
-              </article>
+              </Link>
             )}
 
             {rest.length > 0 && (
               <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {rest.map((post) => (
-                  <article key={post._id} className="card-elegant flex flex-col">
+                  <Link
+                    key={post._id}
+                    to="/blog/$slug"
+                    params={{ slug: post.slug }}
+                    className="card-elegant group flex flex-col overflow-hidden transition-shadow hover:shadow-xl"
+                  >
                     <div className="relative aspect-[16/10]">
                       <img
                         src={post.image}
                         alt={post.title}
-                        className="absolute inset-0 h-full w-full object-cover"
+                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                         loading="lazy"
                       />
                       <span className="absolute left-3 top-3 rounded-full bg-navy/85 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-navy-foreground">
@@ -173,8 +183,11 @@ export default function BlogPage() {
                         {post.excerpt}
                       </p>
                       <PostMeta post={post} className="mt-5" />
+                      <span className="mt-4 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-navy group-hover:text-gold">
+                        Read Article <ArrowRight className="h-3.5 w-3.5 text-gold transition-transform group-hover:translate-x-1" />
+                      </span>
                     </div>
-                  </article>
+                  </Link>
                 ))}
               </div>
             )}
