@@ -58,6 +58,53 @@ function optimizeImage(url?: string): string {
   return `${url}?w=1200&fit=max&auto=format`;
 }
 
+const blogPostQuery = `*[_type == "post" && slug.current == $slug][0]{
+  _id,
+  title,
+  "slug": slug.current,
+  excerpt,
+  "image": mainImage.asset->url,
+  "imageAlt": mainImage.alt,
+  "category": categories[0]->title,
+  "categories": categories[]->title,
+  publishedAt,
+  readTime,
+  "author": author->{ name },
+  featured,
+  body
+}`;
+
+export interface BlogArticle extends BlogPost {
+  imageAlt?: string;
+  categories?: string[];
+  body?: unknown[];
+  isDemo?: boolean;
+}
+
+/** Fetch a single published article by its Sanity slug. */
+export async function fetchBlogPost(slug: string): Promise<BlogArticle | null> {
+  try {
+    const post = await sanityClient.fetch<BlogArticle | null>(blogPostQuery, { slug });
+    if (post?.title) {
+      return {
+        ...post,
+        image: optimizeImage(post.image),
+        category: post.category ?? post.categories?.[0] ?? "Market Trends",
+        readTime: post.readTime ?? "5 min read",
+        author: {
+          name: post.author?.name ?? "Chennai Prime Realty",
+          initials: getInitials(post.author?.name ?? "Chennai Prime Realty"),
+        },
+      };
+    }
+  } catch (err) {
+    console.error("Failed to fetch blog post from Sanity:", err);
+  }
+
+  const demo = normalizeDemoPosts().find((p) => p.slug === slug);
+  return demo ? { ...demo, isDemo: true } : null;
+}
+
 export async function fetchBlogPosts(): Promise<BlogPost[]> {
   try {
     const result = await sanityClient.fetch<BlogPost[]>(blogPostsQuery);
