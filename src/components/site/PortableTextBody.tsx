@@ -78,8 +78,17 @@ const components: PortableTextComponents = {
   },
 };
 
+/** Drop empty spacer paragraphs so article spacing stays even. */
+function isEmptyBlock(block: unknown) {
+  const b = block as { _type?: string; children?: { text?: string }[] };
+  if (b?._type !== "block") return false;
+  return (b.children ?? []).every((child) => !child?.text?.trim());
+}
+
 export function PortableTextBody({ value }: { value: unknown }) {
   if (!Array.isArray(value) || value.length === 0) return null;
+  const blocks = value.filter((block) => !isEmptyBlock(block));
+  if (!blocks.length) return null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return <PortableText value={value as any} components={components} />;
+  return <PortableText value={blocks as any} components={components} />;
 }
