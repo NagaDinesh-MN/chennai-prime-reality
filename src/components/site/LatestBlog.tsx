@@ -75,7 +75,11 @@ export function LatestBlog() {
 
 function BlogCard({ post }: { post: BlogPost }) {
   return (
-    <article className="card-elegant flex flex-col overflow-hidden group">
+    <Link
+      to="/blog/$slug"
+      params={{ slug: post.slug }}
+      className="card-elegant flex flex-col overflow-hidden group transition-shadow hover:shadow-xl"
+    >
       <div className="relative aspect-[16/10] overflow-hidden">
         <img
           src={post.image}
@@ -104,7 +108,10 @@ function BlogCard({ post }: { post: BlogPost }) {
             {post.readTime}
           </span>
         </div>
+        <span className="mt-4 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-navy group-hover:text-gold">
+          Read Article <ArrowRight className="h-3.5 w-3.5 text-gold transition-transform group-hover:translate-x-1" />
+        </span>
       </div>
-    </article>
+    </Link>
   );
 }
