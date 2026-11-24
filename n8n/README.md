@@ -1,12 +1,11 @@
 # n8n setup for the Chennai Prime Realty website
 
-Two workflows connect the website to n8n:
+Three workflow files (import the helper first):
 
 | File | What it does |
 | --- | --- |
 | `1-villa-property-search-helper.json` | Search helper used by the chat. Searches the website's properties for sale and the villa rental sheet (with booking checks). Matching is done in code, not by the AI. |
 | `2-website-chat-and-enquiries.json` | **Website Chat**: the chat widget on the site talks to an AI agent that answers about buying property and renting villas. **Website Enquiry Form**: the site's enquiry form sends each lead here; it is saved to the Enquiries sheet and posted to Slack. |
-
 | `3-whatsapp-villa-booking-bot.json` | The WhatsApp villa booking bot: understands the request, suggests villas, takes the booking after the customer replies YES, saves it to the Bookings sheet, and sends the full booking to Slack. |
 
 ## Setup (about 15 minutes)
