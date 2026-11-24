@@ -7,6 +7,8 @@ Two workflows connect the website to n8n:
 | `1-villa-property-search-helper.json` | Search helper used by the chat. Searches the website's properties for sale and the villa rental sheet (with booking checks). Matching is done in code, not by the AI. |
 | `2-website-chat-and-enquiries.json` | **Website Chat**: the chat widget on the site talks to an AI agent that answers about buying property and renting villas. **Website Enquiry Form**: the site's enquiry form sends each lead here; it is saved to the Enquiries sheet and posted to Slack. |
 
+| `3-whatsapp-villa-booking-bot.json` | The WhatsApp villa booking bot: understands the request, suggests villas, takes the booking after the customer replies YES, saves it to the Bookings sheet, and sends the full booking to Slack. |
+
 ## Setup (about 15 minutes)
 
 1. **Import the helper first.** In n8n: Create workflow → ⋯ → Import from file → `1-villa-property-search-helper.json`. Open **Read Villas** and **Read Bookings** and select your Google Sheets credential. Save, then **Publish**.
@@ -24,6 +26,10 @@ Two workflows connect the website to n8n:
    Then redeploy. (For local testing, put the same values in `.env`.)
 
 If either variable is empty, that feature is simply switched off: no chat bubble, and the form keeps sending to Discord only.
+
+## WhatsApp bot (optional)
+
+Import `3-whatsapp-villa-booking-bot.json`. In **search_villas** pick the helper workflow. Attach credentials: WhatsApp Trigger (WhatsApp OAuth: App ID + App Secret), Reply on WhatsApp (WhatsApp API: permanent access token + Business Account ID, then pick the sender number), OpenAI Chat Model, Google Sheets (create_booking, Save Lead), Slack (pick the channel). Publish. Only one workflow can listen to a WhatsApp number at a time.
 
 ## Keeping it in sync
 

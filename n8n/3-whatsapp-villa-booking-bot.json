@@ -1,0 +1,855 @@
+{
+  "name": "Villa Booking - WhatsApp AI Agent",
+  "nodes": [
+    {
+      "id": "2906409e-a486-4c43-a52f-d1d1653eb329",
+      "name": "WhatsApp Trigger",
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "c7ee5089-2263-4f62-a777-8b636609480c",
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {
+          "messageStatusUpdates": []
+        }
+      }
+    },
+    {
+      "id": "69ef270b-bd43-4077-bd39-39d7cfa0e6f6",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.messages?.[0] ? ($json.messages[0].type === 'text' ? $json.messages[0].text.body : '[Customer sent a ' + $json.messages[0].type + ' message, not text]') : '[NO_CUSTOMER_MESSAGE]' }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are the WhatsApp booking assistant for a villa rental agency based in Chennai, with villas in several locations. You handle the whole journey: understand the requirement, suggest matching villas and take the booking. Today is {{ $now.toFormat('yyyy-MM-dd (cccc)') }}.\n\nSPECIAL INPUTS\n- If the message is exactly [NO_CUSTOMER_MESSAGE]: set is_customer_message false, reply \"\", call no tools.\n- If it says the customer sent a non-text message (voice note, image...): set is_customer_message true and politely ask them to type their request. Call no tools.\n\nSTAGE 0 - WELCOME AND GUIDE\nIf the customer just greets you, asks what you have, is new to the area, or is unsure where to go: call search_villas with all fields empty and use its catalogue (areas, property_types, guests_from, guests_up_to). Welcome them warmly, list the available areas and villa sizes and the guest range, then ask where, when and how many guests. If they describe a trip instead of a place, suggest areas: beach trips - ECR, Mahabalipuram, Pondicherry; hills - Kodaikanal, Yelagiri; city - Bengaluru (only areas that appear in the catalogue). If they ask for a place not in the catalogue, say so and list the areas you do have.\n\nSTAGE 1 - UNDERSTAND\nCollect: location, property type (e.g. 4BHK), number of guests, check-in and check-out dates. Budget and amenities are optional. Ask only for what is missing, in one short message. Convert dates to yyyy-MM-dd; if no year is given use the next upcoming date. Turn relative dates (\"next weekend\") into real dates.\n\nSTAGE 2 - MATCH\nCall search_villas with everything known so far. The tool does all the filtering and date checks exactly - trust its result and never re-check dates, prices or capacity yourself.\n- If match_count > 0: offer up to 3 matches, one per line: Villa_Name - Location - Property_Type - up to max_guests guests - Rs nightly_rate_inr/night (and the total for the stay if nights is known). Start with a short friendly line (e.g. \"Great news! Here's what's available for your dates:\") and end by asking which villa they would like to book and their full name for the booking.\n- If match_count is 0: tell the customer no villa matches, use reasons_not_matching from closest_alternatives to explain what blocks it, and offer to look at other locations.\n- When the customer agrees to see other options (yes / please / check / anything else), call search_villas again keeping guests, dates and budget but with location (and property_type if that was the blocker) empty, and show those matches straight away. Never ask a newcomer to name another location.\n\nBOOKING CONFIRMATION RULE (most important rule)\nA booking always needs two separate customer messages: first the customer chooses a villa, then you send the summary (including the booking name) and ask them to reply YES; only the customer's NEXT message saying yes / confirm / book it allows a booking. Never call create_booking in the same turn where you send or should send the summary. Choosing a villa, saying \"finalize\", \"book it\" before seeing a summary, or giving or correcting a name is NOT confirmation - send the summary instead.\n\nSTAGE 3 - CONFIRM\nWhen the customer chooses a villa and you have the dates and guests, send a summary: villa, location, check-in, check-out, nights, guests, total amount (from search_villas), and \"Payment: our team will share payment details\".\nBooking name:\n- If the customer has told you their full name earlier in this chat, end the summary with: Should I make the booking under the name <that name>? Reply YES to confirm, or send the correct full name.\n- If you do not know their name yet, first ask: May I have your full name for the booking? Then send the summary.\n- If the customer replies with a different name, use that name, send the summary again and ask for YES.\nThe name used in create_booking is the one the customer confirmed with YES.\n\nSTAGE 4 - BOOK\nOnly after the customer clearly confirms (yes / confirm / book it) the summary you just sent:\n1. Call search_villas again with villa_id and the dates (plus guests). If that villa is not in matches any more, apologise and offer alternatives. Do not book.\n2. If it is a match, call create_booking with the details from that result. It returns the Booking_ID.\n3. Reply to the customer: booking confirmed, Booking ID, dates, total, and that the team will share payment details shortly. The agency is informed automatically.\nNever call create_booking twice for the same stay. If the customer already has a booking in this chat, do not book again unless they ask for another stay.\n\nHUMAN HANDOFF\nIf the customer asks for a person, wants to cancel or change a booking, or asks something you cannot answer, tell them politely that the agency team will contact them, and set handed_to_staff true.\n\nRULES\n- Never invent villas, prices, owners or availability. Only use search_villas results.\n- Never ask for the phone number. Never show villa_id or owner details to the customer.\n- Plain text, no markdown, under 120 words. Reply in the customer's language.\n- In messages to the customer, always write dates like \"20 Nov 2026\" (never 2026-11-20). Keep yyyy-MM-dd only in the OUTPUT FIELDS and tool inputs.\n- If a villa is unavailable because it is already booked, just say it is already booked for those dates. Never reveal other customers' booking dates or details.\n- Greet new customers neutrally (e.g. \"Hi! Welcome to ...\") without any name. Only address the customer by name after they have told you their name in this chat.\n\nOUTPUT FIELDS\nreply: the message to send. is_customer_message. booked: true ONLY in the turn where create_booking succeeded, otherwise false. booking_id: the Booking_ID or \"\". handed_to_staff: true if the customer needs a person.\nFill customer_name, check_in, check_out (yyyy-MM-dd), guests, property_type, location, budget_per_night, amenities, matched_villa_ids from the whole conversation; null when unknown.\nWhen booked is true, also fill from the booked villa's search_villas result: villa_id, villa_name, villa_location (location), villa_type (property_type), max_guests, villa_amenities (amenities), owner_name, owner_phone, nightly_rate (nightly_rate_inr), nights, total_amount (total_amount_inr), payment_method (\"To be shared by agency\" unless the customer chose one), payment_status (\"Pending\"). Otherwise leave these null.\nsummary: one line for staff."
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "90aa5a9c-f9da-4cd1-a572-9b89090a5879",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        60,
+        260
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5.4-mini"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "02b2d786-e4f1-41dd-bc57-ae6e0a7e3f23",
+      "name": "Chat Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        180,
+        260
+      ],
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ 'whatsapp:' + ($('WhatsApp Trigger').item.json.messages?.[0]?.from ?? 'system') }}",
+        "contextWindowLength": 20
+      }
+    },
+    {
+      "id": "f9edb5a3-2bcd-428c-866b-2b72a749fd69",
+      "name": "search_villas",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        360,
+        260
+      ],
+      "parameters": {
+        "description": "Find villas that exactly match the customer requirements. It checks type, location, guests, budget, amenities, villa status, available date range, minimum nights and existing bookings, and returns matches (with nights, total amount and owner details) or the closest alternatives with the reason each one does not match. Leave unknown fields empty.",
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_HELPER_WORKFLOW",
+          "mode": "list",
+          "cachedResultName": "Villa & Property Search (helper)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "kind": "rental",
+            "property_type": "={{ $fromAI('property_type', 'Villa size like 2BHK, 3BHK, 4BHK. Empty if unknown', 'string') }}",
+            "location": "={{ $fromAI('location', 'Location or area the customer asked for, e.g. ECR. Empty if unknown', 'string') }}",
+            "guests": "={{ $fromAI('guests', 'Number of guests as digits. Empty if unknown', 'string') }}",
+            "check_in": "={{ $fromAI('check_in', 'Check-in date as yyyy-MM-dd. Empty if unknown', 'string') }}",
+            "check_out": "={{ $fromAI('check_out', 'Check-out date as yyyy-MM-dd. Empty if unknown', 'string') }}",
+            "budget_per_night": "={{ $fromAI('budget_per_night', 'Maximum budget per night in rupees as digits. Empty if not given', 'string') }}",
+            "amenities": "={{ $fromAI('amenities', 'Comma-separated amenities the customer requires, e.g. pool. Empty if none', 'string') }}",
+            "villa_id": "={{ $fromAI('villa_id', 'A specific Villa_ID to check, used before booking. Empty otherwise', 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "property_type",
+              "displayName": "property_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "location",
+              "displayName": "location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "guests",
+              "displayName": "guests",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "check_in",
+              "displayName": "check_in",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "check_out",
+              "displayName": "check_out",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "budget_per_night",
+              "displayName": "budget_per_night",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "amenities",
+              "displayName": "amenities",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "villa_id",
+              "displayName": "villa_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "bhk",
+              "displayName": "bhk",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "budget_min_inr",
+              "displayName": "budget_min_inr",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "budget_max_inr",
+              "displayName": "budget_max_inr",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      }
+    },
+    {
+      "id": "c27ee6cd-47f2-49c6-ae5b-b98e61b069a0",
+      "name": "create_booking",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        520,
+        260
+      ],
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1xOe_hX2RkNKIU3YijZ844SIQ7FsjBEx_78xaXgRMB98",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Bookings",
+          "mode": "name"
+        },
+        "descriptionType": "manual",
+        "toolDescription": "Save a confirmed booking. Call ONLY after the customer has explicitly confirmed the booking summary, and only right after search_villas (with the villa_id and dates) returned that villa as a match. Returns the saved row including Booking_ID.",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Booking_ID": "={{ 'BK-' + $now.toFormat('yyMMdd-HHmmss') }}",
+            "Booked_At": "={{ $now.toFormat('yyyy-MM-dd HH:mm') }}",
+            "Customer_Name": "={{ $fromAI('customer_name', 'Full name of the guest', 'string') }}",
+            "Customer_WhatsApp": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+            "Guests": "={{ $fromAI('guests', 'Number of guests', 'number') }}",
+            "Villa_ID": "={{ $fromAI('villa_id', 'Villa_ID from the villa sheet', 'string') }}",
+            "Villa_Name": "={{ $fromAI('villa_name', 'Villa_Name from the villa sheet', 'string') }}",
+            "Check_In": "={{ $fromAI('check_in', 'Check-in date yyyy-MM-dd', 'string') }}",
+            "Check_Out": "={{ $fromAI('check_out', 'Check-out date yyyy-MM-dd', 'string') }}",
+            "Nights": "={{ $fromAI('nights', 'Number of nights', 'number') }}",
+            "Total_Amount_INR": "={{ $fromAI('total_amount_inr', 'Nightly_Rate_INR multiplied by nights', 'number') }}",
+            "Payment_Status": "Pending",
+            "Booked": "yes"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Booking_ID",
+              "displayName": "Booking_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Booked_At",
+              "displayName": "Booked_At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer_Name",
+              "displayName": "Customer_Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer_WhatsApp",
+              "displayName": "Customer_WhatsApp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Guests",
+              "displayName": "Guests",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Villa_ID",
+              "displayName": "Villa_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Villa_Name",
+              "displayName": "Villa_Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Check_In",
+              "displayName": "Check_In",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Check_Out",
+              "displayName": "Check_Out",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Nights",
+              "displayName": "Nights",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total_Amount_INR",
+              "displayName": "Total_Amount_INR",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Payment_Status",
+              "displayName": "Payment_Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Booked",
+              "displayName": "Booked",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "60c069ea-ed35-436b-bf31-b18a889462d5",
+      "name": "Reply Format",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        700,
+        260
+      ],
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"is_customer_message\": true,\n  \"reply\": \"Your booking is confirmed! Booking ID BK-261114-103000...\",\n  \"booked\": true,\n  \"booking_id\": \"BK-261114-103000\",\n  \"handed_to_staff\": false,\n  \"customer_name\": \"Priya Raman\",\n  \"check_in\": \"2026-11-14\",\n  \"check_out\": \"2026-11-16\",\n  \"guests\": 6,\n  \"property_type\": \"4BHK\",\n  \"location\": \"ECR\",\n  \"budget_per_night\": 30000,\n  \"amenities\": [\n    \"pool\"\n  ],\n  \"matched_villa_ids\": [\n    \"VIL-006\"\n  ],\n  \"villa_id\": \"VIL-006\",\n  \"villa_name\": \"Azure Sands Villa\",\n  \"villa_location\": \"ECR, Chennai\",\n  \"villa_type\": \"4BHK\",\n  \"max_guests\": 14,\n  \"villa_amenities\": \"Pool; Beach Access; Wi-Fi\",\n  \"owner_name\": \"R. Kumar\",\n  \"owner_phone\": \"+91 98400 00000\",\n  \"nightly_rate\": 26000,\n  \"nights\": 2,\n  \"total_amount\": 52000,\n  \"payment_method\": \"To be shared by agency\",\n  \"payment_status\": \"Pending\",\n  \"summary\": \"Booked VIL-006 for 14-16 Nov, 6 guests\"\n}"
+      }
+    },
+    {
+      "id": "f7ebf070-22ab-4353-8c85-09118a7dc94e",
+      "name": "Reply on WhatsApp",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        620,
+        0
+      ],
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+        "textBody": "={{ $('AI Agent').item.json.output.reply }}",
+        "additionalFields": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "7bdf48fc-4825-4248-81b1-8122c6ea86f3",
+      "name": "Save Lead (Google Sheets)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1xOe_hX2RkNKIU3YijZ844SIQ7FsjBEx_78xaXgRMB98",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Enquiries",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "enquiry_id": "={{ 'wa:' + $('WhatsApp Trigger').item.json.messages[0].from }}",
+            "received_at": "={{ $now.toISO() }}",
+            "source": "whatsapp",
+            "customer_name": "={{ $('AI Agent').item.json.output.customer_name || $('WhatsApp Trigger').item.json.contacts?.[0]?.profile?.name || '' }}",
+            "contact": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+            "message": "={{ $('WhatsApp Trigger').item.json.messages[0].text?.body ?? '(non-text message)' }}",
+            "property_type": "={{ $('AI Agent').item.json.output.property_type ?? '' }}",
+            "location": "={{ $('AI Agent').item.json.output.location ?? '' }}",
+            "guest_count": "={{ $('AI Agent').item.json.output.guests ?? '' }}",
+            "check_in": "={{ $('AI Agent').item.json.output.check_in ?? '' }}",
+            "check_out": "={{ $('AI Agent').item.json.output.check_out ?? '' }}",
+            "budget": "={{ $('AI Agent').item.json.output.budget_per_night ?? '' }}",
+            "amenities": "={{ ($('AI Agent').item.json.output.amenities ?? []).join(', ') }}",
+            "matching_villa_ids": "={{ ($('AI Agent').item.json.output.matched_villa_ids ?? []).join(', ') }}",
+            "enquiry_status": "={{ $('AI Agent').item.json.output.booked ? 'booked' : ($('AI Agent').item.json.output.handed_to_staff ? 'handed_to_staff' : 'in_conversation') }}",
+            "response_status": "sent",
+            "ai_reply": "={{ $('AI Agent').item.json.output.reply }}",
+            "requires_human_followup": "={{ $('AI Agent').item.json.output.handed_to_staff }}",
+            "error_details": "={{ $('AI Agent').item.json.output.booking_id ? 'Booking ID: ' + $('AI Agent').item.json.output.booking_id : '' }}"
+          },
+          "matchingColumns": [
+            "contact"
+          ],
+          "schema": [
+            {
+              "id": "enquiry_id",
+              "displayName": "enquiry_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "received_at",
+              "displayName": "received_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "customer_name",
+              "displayName": "customer_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "contact",
+              "displayName": "contact",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "property_type",
+              "displayName": "property_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "location",
+              "displayName": "location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "guest_count",
+              "displayName": "guest_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "check_in",
+              "displayName": "check_in",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "check_out",
+              "displayName": "check_out",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "budget",
+              "displayName": "budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "amenities",
+              "displayName": "amenities",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "matching_villa_ids",
+              "displayName": "matching_villa_ids",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "enquiry_status",
+              "displayName": "enquiry_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "response_status",
+              "displayName": "response_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_reply",
+              "displayName": "ai_reply",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "requires_human_followup",
+              "displayName": "requires_human_followup",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "error_details",
+              "displayName": "error_details",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "id": "21c56527-cd96-49a7-ad31-15e6da3bd0ea",
+      "name": "Booking Confirmed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "65222b14-32cf-490d-b5c3-ecc76d40ea9b",
+              "leftValue": "={{ $('AI Agent').item.json.output.booked }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "38036963-290f-42e4-8287-4b3c2ead1dc9",
+      "name": "Send Booking to Agency (Slack)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1360,
+        -20
+      ],
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=*New Villa Booking - Confirmed*\n\n*VILLA*\nName: {{ $('AI Agent').item.json.output.villa_name }} ({{ $('AI Agent').item.json.output.villa_id }})\nOwner: {{ $('AI Agent').item.json.output.owner_name || 'not on file' }} ({{ $('AI Agent').item.json.output.owner_phone || 'not on file' }})\nLocation: {{ $('AI Agent').item.json.output.villa_location }}\nType: {{ $('AI Agent').item.json.output.villa_type }}, up to {{ $('AI Agent').item.json.output.max_guests }} guests\nAmenities: {{ $('AI Agent').item.json.output.villa_amenities }}\n\n*CUSTOMER (renting)*\nName: {{ $('AI Agent').item.json.output.customer_name }}\nWhatsApp: +{{ $('WhatsApp Trigger').item.json.messages[0].from }}\nGuests: {{ $('AI Agent').item.json.output.guests }}\n\n*STAY*\nCheck-in: {{ $('AI Agent').item.json.output.check_in ? DateTime.fromISO($('AI Agent').item.json.output.check_in).toFormat('d LLL yyyy') : 'not set' }}\nCheck-out: {{ $('AI Agent').item.json.output.check_out ? DateTime.fromISO($('AI Agent').item.json.output.check_out).toFormat('d LLL yyyy') : 'not set' }}\nDuration: {{ $('AI Agent').item.json.output.nights }} nights\n\n*PAYMENT*\nCost: Rs {{ $('AI Agent').item.json.output.total_amount }} (Rs {{ $('AI Agent').item.json.output.nightly_rate }} x {{ $('AI Agent').item.json.output.nights }} nights)\nPayment method: {{ $('AI Agent').item.json.output.payment_method }}\nPayment status: {{ $('AI Agent').item.json.output.payment_status }}\n\n*BOOKING*\nBooking ID: {{ $('AI Agent').item.json.output.booking_id }}\nStatus: Confirmed",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2
+    }
+  ],
+  "connections": {
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "search_villas": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create_booking": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply Format": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Reply on WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply on WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Save Lead (Google Sheets)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Lead (Google Sheets)": {
+      "main": [
+        [
+          {
+            "node": "Booking Confirmed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Booking Confirmed?": {
+      "main": [
+        [
+          {
+            "node": "Send Booking to Agency (Slack)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
