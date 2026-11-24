@@ -1,0 +1,30 @@
+# n8n setup for the Chennai Prime Realty website
+
+Two workflows connect the website to n8n:
+
+| File | What it does |
+| --- | --- |
+| `1-villa-property-search-helper.json` | Search helper used by the chat. Searches the website's properties for sale and the villa rental sheet (with booking checks). Matching is done in code, not by the AI. |
+| `2-website-chat-and-enquiries.json` | **Website Chat**: the chat widget on the site talks to an AI agent that answers about buying property and renting villas. **Website Enquiry Form**: the site's enquiry form sends each lead here; it is saved to the Enquiries sheet and posted to Slack. |
+
+## Setup (about 15 minutes)
+
+1. **Import the helper first.** In n8n: Create workflow → ⋯ → Import from file → `1-villa-property-search-helper.json`. Open **Read Villas** and **Read Bookings** and select your Google Sheets credential. Save, then **Publish**.
+2. **Import the website workflow.** Import `2-website-chat-and-enquiries.json`.
+3. **Connect the helper.** Open **search_properties_for_sale** and **search_villas_for_rent**, and in *Workflow* pick **Villa & Property Search (helper)** from the list.
+4. **Attach credentials.** Chat Model → OpenAI (or swap in an Anthropic Chat Model with Claude Haiku 5.5). Save Website Lead → Google Sheets. Alert Team (Slack) → Slack, then pick the channel.
+5. **Publish** the website workflow.
+6. **Copy the two URLs:**
+   - Open **Website Chat** → copy the *Chat URL*.
+   - Open **Website Enquiry Form** → copy the *Production URL*.
+7. **Give them to the website.** In Vercel → Project → Settings → Environment Variables, add:
+   - `VITE_N8N_CHAT_WEBHOOK_URL` = the Chat URL
+   - `VITE_N8N_ENQUIRY_WEBHOOK_URL` = the Production URL
+
+   Then redeploy. (For local testing, put the same values in `.env`.)
+
+If either variable is empty, that feature is simply switched off: no chat bubble, and the form keeps sending to Discord only.
+
+## Keeping it in sync
+
+The properties for sale are listed inside the helper's **Filter Matches** node (`LISTINGS`). When `src/data/properties.ts` changes, update that list too.

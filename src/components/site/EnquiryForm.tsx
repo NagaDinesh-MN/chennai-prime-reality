@@ -15,6 +15,36 @@ const schema = z.object({
 
 const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1514320703699030046/6qAjvN0_77MMkN4RFokN75ZbCBHLUm_ZTaELLfzrrNePW7QGQUt0fihvEU_yD18nxub8";
 
+// n8n "Website Enquiry" webhook (Production URL). If not set, only Discord is used.
+const N8N_ENQUIRY_WEBHOOK_URL = import.meta.env.VITE_N8N_ENQUIRY_WEBHOOK_URL as string | undefined;
+
+// Sends the enquiry to the n8n workflow. Never blocks the form: if n8n is
+// down, the enquiry still reaches Discord and the visitor still sees success.
+async function sendToN8n(d: z.infer<typeof schema>) {
+  if (!N8N_ENQUIRY_WEBHOOK_URL) return;
+  try {
+    const res = await fetch(N8N_ENQUIRY_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source: "website",
+        name: d.name,
+        phone: d.phone,
+        email: d.email,
+        property_type: d.propertyType,
+        location: d.location,
+        budget: d.budget,
+        message: d.message?.trim() ?? "",
+        page: typeof window !== "undefined" ? window.location.pathname : "",
+        submitted_at: new Date().toISOString(),
+      }),
+    });
+    if (!res.ok) console.error("n8n enquiry webhook returned", res.status);
+  } catch (err) {
+    console.error("Could not reach the n8n enquiry webhook", err);
+  }
+}
+
 export function EnquiryForm({ compact = false }: { compact?: boolean }) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<null | { name: string; email: string }>(null);
@@ -56,11 +86,14 @@ export function EnquiryForm({ compact = false }: { compact?: boolean }) {
       // would cause Discord to silently reject the request).
       const body = new FormData();
       body.append("payload_json", JSON.stringify(payload));
-      await fetch(DISCORD_WEBHOOK_URL, {
-        method: "POST",
-        mode: "no-cors",
-        body,
-      });
+      await Promise.all([
+        fetch(DISCORD_WEBHOOK_URL, {
+          method: "POST",
+          mode: "no-cors",
+          body,
+        }),
+        sendToN8n(d),
+      ]);
       toast.success("Enquiry sent successfully!");
       form.reset();
       setSuccess({ name: d.name, email: d.email });

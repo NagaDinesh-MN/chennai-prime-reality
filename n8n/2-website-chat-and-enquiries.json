@@ -1,0 +1,722 @@
+{
+  "name": "Chennai Prime Realty - Website Chat & Enquiries",
+  "nodes": [
+    {
+      "id": "848116ed-acfe-48f3-8abe-940c20d509e8",
+      "name": "Website Chat",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "75f6049f-18cb-489d-9642-77e925de0c0b",
+      "parameters": {
+        "public": true,
+        "mode": "webhook",
+        "options": {
+          "allowedOrigins": "*",
+          "loadPreviousSession": "memory"
+        }
+      }
+    },
+    {
+      "id": "7107cc61-696e-465b-be3a-ef488435e55b",
+      "name": "Website AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        300,
+        0
+      ],
+      "parameters": {
+        "options": {
+          "systemMessage": "=You are the online assistant for Chennai Prime Realty, a Chennai real estate agency, chatting with visitors on the company website. Today is {{ $now.toFormat('yyyy-MM-dd (cccc)') }}.\n\nYou help with two things:\n1. BUYING property (apartments, villas, plots, commercial spaces) from the agency's listings. Use search_properties_for_sale.\n2. RENTING a villa for a short stay (priced per night). Use search_villas_for_rent.\nIf it is not clear which one the visitor wants, ask: \"Are you looking to buy a property, or rent a villa for a stay?\"\n\nWELCOME\nIf the visitor just greets you or is unsure, call the matching search tool with all fields empty and use its catalogue to say what areas, types and price ranges are available. Greet neutrally; use the visitor's name only after they tell you.\n\nBUYING\nCollect what matters: property type (apartment, villa, plot, commercial), location, BHK (for homes) and budget. Ask only for what is missing. Convert the budget to rupees for the tool (1 Cr = 10000000, 1 Lakh = 100000); for a range like \"1 Cr - 2 Cr\" pass budget_min_inr and budget_max_inr. The tool does the filtering exactly; trust its result.\nShow up to 3 matches, one per line: Title - Location - BHK (if any) - Area - Price. If nothing matches, use reasons_not_matching to explain and suggest the closest options.\nOffer a site visit or a call with an advisor. If the visitor wants one, ask for their name and phone number and tell them an advisor will call within 24 hours. You cannot book site visits yourself.\n\nRENTING A VILLA\nCollect location, BHK, guests, check-in and check-out dates (yyyy-MM-dd for the tool; if no year is given use the next upcoming date). The tool checks availability and existing bookings exactly; trust its result.\nShow up to 3 matches: Villa name - Location - BHK - up to N guests - Rs rate per night - total for the stay. If nothing matches, explain why and suggest alternatives.\nOn the website you cannot confirm a booking. To book, ask for their name and phone number and say the team will confirm availability and payment, or that they can book instantly on our WhatsApp.\n\nRULES\n- Never invent properties, prices, villas or availability. Only use tool results.\n- Never show internal IDs, owner names or owner phone numbers.\n- Plain text, short (under 120 words), friendly and professional. Reply in the visitor's language.\n- Office: 12, Greams Road, Thousand Lights, Chennai. Phone +91 98400 12345. Mon-Sat 9:30 AM - 7:00 PM."
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5ec06bd2-e01a-4595-ab51-4d00950cb5ec",
+      "name": "Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        120,
+        240
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5.4-mini"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ca42b3c1-c5f4-4daf-99c3-dbca6f737611",
+      "name": "Chat Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        260,
+        240
+      ],
+      "parameters": {
+        "contextWindowLength": 20
+      }
+    },
+    {
+      "id": "3698facd-6d73-478f-b01f-42b7d21ac83b",
+      "name": "search_properties_for_sale",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        420,
+        240
+      ],
+      "parameters": {
+        "description": "Search the agency's properties for sale (apartments, villas, plots, commercial). Returns exact matches with price, or the closest alternatives with the reason each does not match. Leave unknown fields empty.",
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_HELPER_WORKFLOW",
+          "mode": "list",
+          "cachedResultName": "Villa & Property Search (helper)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "category": "={{ $fromAI('category', 'Apartments, Villas, Plots or Commercial. Empty if unknown', 'string') }}",
+            "location": "={{ $fromAI('location', 'Area such as OMR, ECR, Anna Nagar, Velachery, Porur, Adyar. Empty if unknown', 'string') }}",
+            "bhk": "={{ $fromAI('bhk', 'Number of bedrooms as digits, e.g. 3. Empty if unknown', 'string') }}",
+            "budget_min_inr": "={{ $fromAI('budget_min_inr', 'Minimum budget in rupees as digits. Empty if none', 'string') }}",
+            "budget_max_inr": "={{ $fromAI('budget_max_inr', 'Maximum budget in rupees as digits. Empty if none', 'string') }}",
+            "kind": "sale"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "property_type",
+              "displayName": "property_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "location",
+              "displayName": "location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "guests",
+              "displayName": "guests",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "check_in",
+              "displayName": "check_in",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "check_out",
+              "displayName": "check_out",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "budget_per_night",
+              "displayName": "budget_per_night",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "amenities",
+              "displayName": "amenities",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "villa_id",
+              "displayName": "villa_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "bhk",
+              "displayName": "bhk",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "budget_min_inr",
+              "displayName": "budget_min_inr",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "budget_max_inr",
+              "displayName": "budget_max_inr",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      }
+    },
+    {
+      "id": "283c7d38-a164-4364-8e3c-d1936070dc01",
+      "name": "search_villas_for_rent",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        580,
+        240
+      ],
+      "parameters": {
+        "description": "Search villas for a short-stay rental. Checks type, location, guests, budget per night, amenities, availability dates, minimum nights and existing bookings. Returns matches with nightly rate and total, or closest alternatives with reasons. Leave unknown fields empty.",
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_HELPER_WORKFLOW",
+          "mode": "list",
+          "cachedResultName": "Villa & Property Search (helper)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "property_type": "={{ $fromAI('property_type', 'Villa size like 2BHK, 3BHK, 4BHK. Empty if unknown', 'string') }}",
+            "location": "={{ $fromAI('location', 'Area the visitor asked for, e.g. ECR. Empty if unknown', 'string') }}",
+            "guests": "={{ $fromAI('guests', 'Number of guests as digits. Empty if unknown', 'string') }}",
+            "check_in": "={{ $fromAI('check_in', 'Check-in date yyyy-MM-dd. Empty if unknown', 'string') }}",
+            "check_out": "={{ $fromAI('check_out', 'Check-out date yyyy-MM-dd. Empty if unknown', 'string') }}",
+            "budget_per_night": "={{ $fromAI('budget_per_night', 'Max budget per night in rupees as digits. Empty if none', 'string') }}",
+            "amenities": "={{ $fromAI('amenities', 'Comma-separated required amenities. Empty if none', 'string') }}",
+            "kind": "rental"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "property_type",
+              "displayName": "property_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "location",
+              "displayName": "location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "guests",
+              "displayName": "guests",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "check_in",
+              "displayName": "check_in",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "check_out",
+              "displayName": "check_out",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "budget_per_night",
+              "displayName": "budget_per_night",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "amenities",
+              "displayName": "amenities",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "villa_id",
+              "displayName": "villa_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "bhk",
+              "displayName": "bhk",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "budget_min_inr",
+              "displayName": "budget_min_inr",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "budget_max_inr",
+              "displayName": "budget_max_inr",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      }
+    },
+    {
+      "id": "793f6fbd-41b4-4f88-873c-8ee44baec045",
+      "name": "Website Enquiry Form",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        520
+      ],
+      "webhookId": "481cf1fe-4b3b-440d-a63e-0c24b89a4b93",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chennai-prime-enquiry",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      }
+    },
+    {
+      "id": "ea380405-77d2-43a0-8aca-f64eeb0e0fc3",
+      "name": "Reply to Website",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        240,
+        520
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true } }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "3bb8451b-61b1-4223-8df3-9c7d4d6c1dfa",
+      "name": "Save Website Lead",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        480,
+        520
+      ],
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1xOe_hX2RkNKIU3YijZ844SIQ7FsjBEx_78xaXgRMB98",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Enquiries",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "enquiry_id": "={{ 'web:' + $now.toFormat('yyMMdd-HHmmss') }}",
+            "received_at": "={{ $now.toISO() }}",
+            "source": "website form",
+            "customer_name": "={{ $json.body.name }}",
+            "contact": "={{ $json.body.phone }}",
+            "message": "={{ ($json.body.message || '') + ' | Email: ' + $json.body.email }}",
+            "property_type": "={{ $json.body.property_type }}",
+            "location": "={{ $json.body.location }}",
+            "budget": "={{ $json.body.budget }}",
+            "enquiry_status": "new",
+            "response_status": "follow_up_needed",
+            "requires_human_followup": "true"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "enquiry_id",
+              "displayName": "enquiry_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "received_at",
+              "displayName": "received_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "customer_name",
+              "displayName": "customer_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "contact",
+              "displayName": "contact",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "property_type",
+              "displayName": "property_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "location",
+              "displayName": "location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "budget",
+              "displayName": "budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "enquiry_status",
+              "displayName": "enquiry_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "response_status",
+              "displayName": "response_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "requires_human_followup",
+              "displayName": "requires_human_followup",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "id": "1ae59813-733e-4933-b69e-3e1ec1a2a784",
+      "name": "Alert Team (Slack)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        720,
+        520
+      ],
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=New website enquiry - Chennai Prime Realty\nName: {{ $('Website Enquiry Form').item.json.body.name }}\nPhone: {{ $('Website Enquiry Form').item.json.body.phone }}\nEmail: {{ $('Website Enquiry Form').item.json.body.email }}\nLooking for: {{ $('Website Enquiry Form').item.json.body.property_type }} in {{ $('Website Enquiry Form').item.json.body.location }}\nBudget: {{ $('Website Enquiry Form').item.json.body.budget }}\nMessage: {{ $('Website Enquiry Form').item.json.body.message || '-' }}\nPage: {{ $('Website Enquiry Form').item.json.body.page }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2
+    }
+  ],
+  "connections": {
+    "Website Chat": {
+      "main": [
+        [
+          {
+            "node": "Website AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Website AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Website AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "Website Chat",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "search_properties_for_sale": {
+      "ai_tool": [
+        [
+          {
+            "node": "Website AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "search_villas_for_rent": {
+      "ai_tool": [
+        [
+          {
+            "node": "Website AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Website Enquiry Form": {
+      "main": [
+        [
+          {
+            "node": "Reply to Website",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply to Website": {
+      "main": [
+        [
+          {
+            "node": "Save Website Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Website Lead": {
+      "main": [
+        [
+          {
+            "node": "Alert Team (Slack)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

@@ -109,6 +109,7 @@ import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
 import { PageLoader } from "@/components/site/PageLoader";
 import { Toaster } from "@/components/ui/sonner";
+import { ChatWidget } from "@/components/site/ChatWidget";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
@@ -121,6 +122,7 @@ function RootComponent() {
         <Footer />
       </div>
       <Toaster richColors position="top-center" />
+      <ChatWidget />
     </QueryClientProvider>
   );
 }
