@@ -2,7 +2,7 @@
   "name": "Book Site Visit (helper)",
   "nodes": [
     {
-      "id": "7bca0388-faa5-4e77-9e47-818c964de1ee",
+      "id": "7f003651-bf87-4e72-be49-9bc67fe3071a",
       "name": "When Called by Agent",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
@@ -39,7 +39,7 @@
       }
     },
     {
-      "id": "1f3c4369-2278-483f-bb67-c0f5f9af2a5f",
+      "id": "64676016-1513-4537-8da2-b8e08f312b99",
       "name": "Read Site Visits",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
@@ -65,7 +65,7 @@
       "executeOnce": true
     },
     {
-      "id": "0d5d7195-b6d9-43dd-b936-20db3c038268",
+      "id": "2ff8cca2-443b-4881-99ec-340c8b145ab9",
       "name": "Check Visit",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -78,7 +78,7 @@
       }
     },
     {
-      "id": "cc4007cd-f3d2-414f-ac3b-6ca3c293abf0",
+      "id": "5fde9645-c0cc-471f-9db1-785e8be0d6a9",
       "name": "Visit OK?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -96,7 +96,7 @@
           },
           "conditions": [
             {
-              "id": "a6196d46-1486-46d7-82e7-fd8ffd31ad37",
+              "id": "f32f7dbd-c68e-4b0d-aea1-8bb237d692a2",
               "leftValue": "={{ $json.ok }}",
               "rightValue": "",
               "operator": {
@@ -113,7 +113,7 @@
       }
     },
     {
-      "id": "af9985ee-ec0f-4c3c-96b6-fd3c6fe2bc0b",
+      "id": "9a929102-f2dc-4b39-9c54-e3ae820379a5",
       "name": "Prepare Row",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -126,7 +126,7 @@
       }
     },
     {
-      "id": "44fbb066-4050-402a-836c-5b1185c7ac26",
+      "id": "faf913a7-6055-4feb-b875-cdc9e5308b6c",
       "name": "Save Site Visit",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
@@ -248,7 +248,7 @@
       }
     },
     {
-      "id": "47e4ccd2-5dd7-4c3d-83e1-dc5f4a927625",
+      "id": "d6aeab17-afe0-4c8b-8883-65e2a3715510",
       "name": "Alert Team (Slack)",
       "type": "n8n-nodes-base.slack",
       "typeVersion": 2.3,
@@ -271,7 +271,7 @@
       }
     },
     {
-      "id": "4e260698-72b2-471c-a654-9c0e71273bfd",
+      "id": "7efb4f53-add8-4bd8-bf23-0e31e2e456fb",
       "name": "Visit Booked",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -284,7 +284,7 @@
       }
     },
     {
-      "id": "59e9f86b-05b6-4f37-984e-50e885f19fae",
+      "id": "a0b0479a-a150-4cca-903c-d22697cb542d",
       "name": "Visit Refused",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,

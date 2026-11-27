@@ -1009,7 +1009,7 @@
       }
     },
     {
-      "id": "930a51d1-218a-435b-a85d-c04e3caaf6b0",
+      "id": "e8e04acc-fd81-46a1-b485-e293fdb0954e",
       "name": "Send WhatsApp Follow-up",
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
@@ -1049,12 +1049,12 @@
       "onError": "continueErrorOutput"
     },
     {
-      "id": "18531189-596c-4e80-a77e-096315bf1335",
+      "id": "3147d794-7213-41d4-a7be-b77d19b7c295",
       "name": "Send Fallback (hello_world)",
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
       "position": [
-        1200,
+        1440,
         620
       ],
       "parameters": {
@@ -1065,7 +1065,7 @@
       }
     },
     {
-      "id": "9d0e0792-1de0-4683-a116-fcf547f9d379",
+      "id": "32fdd3b4-bcf9-4596-b949-9f9d7c91ab82",
       "name": "book_site_visit",
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2.2,
@@ -1170,6 +1170,24 @@
           "convertFieldsToString": false
         }
       }
+    },
+    {
+      "id": "5dfd3971-469a-40d0-a3ed-9acedf480c2f",
+      "name": "Send Personal Message",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        520
+      ],
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "1415379591653506",
+        "recipientPhoneNumber": "={{ (() => { const d = String($('Website Enquiry Form').item.json.body.phone || '').replace(/[^0-9]/g, ''); return d.length === 10 ? '91' + d : d; })() }}",
+        "textBody": "={{ 'Hi ' + ($('Website Enquiry Form').item.json.body.name || 'there').split(' ')[0] + ', thanks for your enquiry with Chennai Prime Realty about ' + ($('Website Enquiry Form').item.json.body.property_type ? 'a ' + String($('Website Enquiry Form').item.json.body.property_type).toLowerCase() : 'a property') + ' in ' + ($('Website Enquiry Form').item.json.body.location || 'Chennai') + '. Reply to this message to see matching properties with photos or to book a site visit.' }}",
+        "additionalFields": {}
+      },
+      "onError": "continueErrorOutput"
     }
   ],
   "connections": {
@@ -1315,7 +1333,7 @@
         [],
         [
           {
-            "node": "Send Fallback (hello_world)",
+            "node": "Send Personal Message",
             "type": "main",
             "index": 0
           }
@@ -1328,6 +1346,18 @@
           {
             "node": "Website AI Agent",
             "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Personal Message": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Send Fallback (hello_world)",
+            "type": "main",
             "index": 0
           }
         ]
