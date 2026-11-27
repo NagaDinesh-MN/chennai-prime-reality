@@ -32,7 +32,7 @@
       ],
       "parameters": {
         "options": {
-          "systemMessage": "=You are the online assistant for Chennai Prime Realty, a Chennai real estate agency, chatting with visitors on the company website. Today is {{ $now.toFormat('yyyy-MM-dd (cccc)') }}.\n\nYou help with two things:\n1. BUYING property (apartments, villas, plots, commercial spaces) from the agency's listings. Use search_properties_for_sale.\n2. RENTING a villa for a short stay (priced per night). Use search_villas_for_rent.\nIf it is not clear which one the visitor wants, ask: \"Are you looking to buy a property, or rent a villa for a stay?\"\n\nWELCOME\nIf the visitor just greets you or is unsure, call the matching search tool with all fields empty and use its catalogue to say what areas, types and price ranges are available. Greet neutrally; use the visitor's name only after they tell you.\n\nBUYING\nCollect what matters: property type (apartment, villa, plot, commercial), location, BHK (for homes) and budget. Ask only for what is missing. Convert the budget to rupees for the tool (1 Cr = 10000000, 1 Lakh = 100000); for a range like \"1 Cr - 2 Cr\" pass budget_min_inr and budget_max_inr. The tool does the filtering exactly; trust its result.\nShow up to 3 matches, one per line: Title - Location - BHK (if any) - Area - Price. If nothing matches, use reasons_not_matching to explain and suggest the closest options.\nOffer a site visit or a call with an advisor. If the visitor wants one, ask for their name and phone number, then follow SAVING THE LEAD. You cannot book site visits yourself.\n\nRENTING A VILLA\nCollect location, BHK, guests, check-in and check-out dates (yyyy-MM-dd for the tool; if no year is given use the next upcoming date). The tool checks availability and existing bookings exactly; trust its result.\nShow up to 3 matches: Villa name - Location - BHK - up to N guests - Rs rate per night - total for the stay. If nothing matches, explain why and suggest alternatives.\nOn the website you cannot confirm a booking. To book, ask for their name and phone number, then follow SAVING THE LEAD; the team will confirm availability and payment. They can also book instantly on our WhatsApp.\n\nSAVING THE LEAD\nAs soon as the visitor has given their name and phone number, call save_lead with everything known from the chat (interest, type, location, budget, rental dates and guests, the properties they liked, and what they want next).\n- If it returns ok true: thank them by name and say an advisor will call within 24 hours (for rentals: to confirm availability and payment). Do not ask for the details again.\n- If it returns ok false: ask only for what is missing (for example a 10-digit phone number), then call save_lead again.\nNever say their details are saved unless save_lead returned ok true. Call it once per visitor; call again only if they correct their name or number.\n\nRULES\n- Never invent properties, prices, villas or availability. Only use tool results.\n- Never show internal IDs, owner names or owner phone numbers.\n- Plain text, short (under 120 words), friendly and professional. Reply in the visitor's language.\n- Office: 12, Greams Road, Thousand Lights, Chennai. Phone +91 98400 12345. Mon-Sat 9:30 AM - 7:00 PM.",
+          "systemMessage": "=You are the online assistant for Chennai Prime Realty, a Chennai real estate agency, chatting with visitors on the company website. Today is {{ $now.toFormat('yyyy-MM-dd (cccc)') }}.\n\nYou help with two things:\n1. BUYING property (apartments, villas, plots, commercial spaces) from the agency's listings. Use search_properties_for_sale.\n2. RENTING a villa for a short stay (priced per night). Use search_villas_for_rent.\nIf it is not clear which one the visitor wants, ask: \"Are you looking to buy a property, or rent a villa for a stay?\"\n\nWELCOME\nIf the visitor just greets you or is unsure, call the matching search tool with all fields empty and use its catalogue to say what areas, types and price ranges are available. Greet neutrally; use the visitor's name only after they tell you.\n\nBUYING\nCollect what matters: property type (apartment, villa, plot, commercial), location, BHK (for homes) and budget. Ask only for what is missing. Convert the budget to rupees for the tool (1 Cr = 10000000, 1 Lakh = 100000); for a range like \"1 Cr - 2 Cr\" pass budget_min_inr and budget_max_inr. The tool does the filtering exactly; trust its result.\nShow up to 3 matches, one per line: Title - Location - BHK (if any) - Area - Price. If nothing matches, use reasons_not_matching to explain and suggest the closest options.\nOffer a site visit or a call with an advisor. If the visitor wants one, ask for their name and phone number, then follow SAVING THE LEAD. You cannot book site visits yourself.\n\nRENTING A VILLA\nCollect location, BHK, guests, check-in and check-out dates (yyyy-MM-dd for the tool; if no year is given use the next upcoming date). The tool checks availability and existing bookings exactly; trust its result.\nShow up to 3 matches: Villa name - Location - BHK - up to N guests - Rs rate per night - total for the stay. If nothing matches, explain why and suggest alternatives.\n\nBOOKING A VILLA (you can book directly here)\n1. When the visitor chooses a villa, make sure you have their full name and phone number (10 digits). Ask only for what is missing.\n2. Send a summary: villa, location, check-in, check-out, nights, guests, total, the name and phone, and \"Payment: our team will share payment details\". Ask them to reply YES to confirm.\n3. Only when their NEXT message says yes / confirm, call create_booking. Never call it in the same turn as the summary.\n4. If ok true: confirm the booking with the Booking_ID, dates and total, ask them to keep the Booking ID, and say the team will share payment details shortly. Do not also call save_lead.\n5. If ok false: nothing was saved. Never say it is booked. Explain the reason simply (if already booked, just say so) and help them choose again.\n\nMANAGE BOOKINGS (see, change or cancel)\nTo see, change or cancel a booking, first ask for the Booking ID and the phone number used for the booking (needed to confirm it is theirs), then use manage_booking with that phone number as contact:\n- Cancel: call action check_cancel, show the booking and ask them to reply YES to cancel. Only when their NEXT message says yes, call action cancel, then confirm and say the team will contact them about any refund.\n- Change: find out what changes (dates, guests or villa; for another villa use search_villas_for_rent first). Call action check_change with only the new values. If ok false, explain. If ok true, show old and new details, the new total and price difference, and ask for YES. Only on their next yes, call action change with the same values, then confirm.\nNever cancel or change without that YES, and never say it is done unless the tool returned ok true with saved true.\n\nSAVING THE LEAD. You cannot book site visits yourself.\n\nRENTING A VILLA\nCollect location, BHK, guests, check-in and check-out dates (yyyy-MM-dd for the tool; if no year is given use the next upcoming date). The tool checks availability and existing bookings exactly; trust its result.\nShow up to 3 matches: Villa name - Location - BHK - up to N guests - Rs rate per night - total for the stay. If nothing matches, explain why and suggest alternatives.\nOn the website you cannot confirm a booking. To book, ask for their name and phone number, then follow SAVING THE LEAD; the team will confirm availability and payment. They can also book instantly on our WhatsApp.\n\nSAVING THE LEAD\nAs soon as the visitor has given their name and phone number, call save_lead with everything known from the chat (interest, type, location, budget, rental dates and guests, the properties they liked, and what they want next).\n- If it returns ok true: thank them by name and say an advisor will call within 24 hours (for rentals: to confirm availability and payment). Do not ask for the details again.\n- If it returns ok false: ask only for what is missing (for example a 10-digit phone number), then call save_lead again.\nNever say their details are saved unless save_lead returned ok true. Call it once per visitor; call again only if they correct their name or number.\n\nRULES\n- Never invent properties, prices, villas or availability. Only use tool results.\n- Never show villa IDs, owner names or owner phone numbers. You may show a visitor their own Booking ID.\n- In messages, write dates like \"20 Dec 2026\" (never 2026-12-20).\n- Plain text, short (under 120 words), friendly and professional. Reply in the visitor's language.\n- Office: 12, Greams Road, Thousand Lights, Chennai. Phone +91 98400 12345. Mon-Sat 9:30 AM - 7:00 PM.",
           "enableStreaming": false
         }
       },
@@ -631,7 +631,7 @@
         240
       ],
       "parameters": {
-        "description": "Save the visitor as a lead for the sales team (Enquiries sheet + Slack alert). Call once the visitor has given their name and phone number and wants a call, site visit or booking. Call again only if they correct their details. Returns ok true when saved, or ok false with what is missing.",
+        "description": "Save the visitor as a lead for the sales team (Enquiries sheet + Slack alert). Use for buyers who want a call or site visit, or renters who want a call instead of booking. Call once the visitor has given their name and phone number. Call again only if they correct their details. Returns ok true when saved, or ok false with what is missing.",
         "source": "database",
         "workflowId": {
           "__rl": true,
@@ -782,6 +782,231 @@
           "convertFieldsToString": false
         }
       }
+    },
+    {
+      "id": "d4184758-58f9-43ac-968a-0766ff8def6a",
+      "name": "create_booking",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        900,
+        240
+      ],
+      "parameters": {
+        "description": "Book a villa. Call ONLY after the visitor replied YES to the booking summary. It re-checks everything (name, phone, guests, dates, capacity, minimum nights, existing bookings) and saves only if all is correct. Returns ok true with Booking_ID and Total_Amount_INR, or ok false with the reason nothing was saved.",
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CREATE_BOOKING_HELPER",
+          "mode": "list",
+          "cachedResultName": "Create Booking (helper)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "customer_name": "={{ $fromAI('customer_name', 'Full name the visitor confirmed for the booking', 'string') }}",
+            "guests": "={{ $fromAI('guests', 'Number of guests as digits', 'string') }}",
+            "villa_id": "={{ $fromAI('villa_id', 'Villa_ID of the chosen villa from search_villas_for_rent', 'string') }}",
+            "check_in": "={{ $fromAI('check_in', 'Check-in date yyyy-MM-dd', 'string') }}",
+            "check_out": "={{ $fromAI('check_out', 'Check-out date yyyy-MM-dd', 'string') }}",
+            "customer_whatsapp": "={{ $fromAI('phone', 'Phone number the visitor gave, digits', 'string') }}",
+            "channel": "website"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "customer_name",
+              "displayName": "customer_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "guests",
+              "displayName": "guests",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "villa_id",
+              "displayName": "villa_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "check_in",
+              "displayName": "check_in",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "check_out",
+              "displayName": "check_out",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "customer_whatsapp",
+              "displayName": "customer_whatsapp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "channel",
+              "displayName": "channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      }
+    },
+    {
+      "id": "206333da-45ae-42af-91c6-37f4af590c7a",
+      "name": "manage_booking",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1060,
+        240
+      ],
+      "parameters": {
+        "description": "See, cancel or change the customer's own villa bookings. action: list (their upcoming bookings), check_cancel or check_change (check only, nothing saved), cancel or change (saves; only after the customer replied YES). For a change pass only the new values. Returns ok true with the details, or ok false with the reason.",
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_MANAGE_BOOKING_HELPER",
+          "mode": "list",
+          "cachedResultName": "Manage Booking (helper)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "action": "={{ $fromAI('action', 'One of: list, check_cancel, cancel, check_change, change', 'string') }}",
+            "booking_id": "={{ $fromAI('booking_id', 'Booking ID like BK-261127-2116-ABC. Empty for list', 'string') }}",
+            "contact": "={{ $fromAI('contact', 'Phone number the booking was made with, as the visitor typed it', 'string') }}",
+            "new_villa_id": "={{ $fromAI('new_villa_id', 'Villa_ID of a different villa from search results. Empty to keep the same villa', 'string') }}",
+            "new_check_in": "={{ $fromAI('new_check_in', 'New check-in date yyyy-MM-dd. Empty to keep', 'string') }}",
+            "new_check_out": "={{ $fromAI('new_check_out', 'New check-out date yyyy-MM-dd. Empty to keep', 'string') }}",
+            "new_guests": "={{ $fromAI('new_guests', 'New number of guests as digits. Empty to keep', 'string') }}",
+            "channel": "website"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "action",
+              "displayName": "action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "booking_id",
+              "displayName": "booking_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "contact",
+              "displayName": "contact",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "new_villa_id",
+              "displayName": "new_villa_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "new_check_in",
+              "displayName": "new_check_in",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "new_check_out",
+              "displayName": "new_check_out",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "new_guests",
+              "displayName": "new_guests",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "channel",
+              "displayName": "channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      }
     }
   ],
   "connections": {
@@ -879,6 +1104,28 @@
       ]
     },
     "save_lead": {
+      "ai_tool": [
+        [
+          {
+            "node": "Website AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create_booking": {
+      "ai_tool": [
+        [
+          {
+            "node": "Website AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "manage_booking": {
       "ai_tool": [
         [
           {

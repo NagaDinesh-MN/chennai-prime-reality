@@ -1,0 +1,460 @@
+{
+  "name": "Manage Booking (helper)",
+  "nodes": [
+    {
+      "id": "19f6f007-fea5-45e1-a417-abd6b17e5fad",
+      "name": "When Called by Agent",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "action"
+            },
+            {
+              "name": "booking_id"
+            },
+            {
+              "name": "contact"
+            },
+            {
+              "name": "new_villa_id"
+            },
+            {
+              "name": "new_check_in"
+            },
+            {
+              "name": "new_check_out"
+            },
+            {
+              "name": "new_guests"
+            },
+            {
+              "name": "channel"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "51d360ec-bea9-4c19-9bfe-2050f79f1fe3",
+      "name": "Read Villas",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "value": "1xOe_hX2RkNKIU3YijZ844SIQ7FsjBEx_78xaXgRMB98",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Villas",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "id": "637d01da-8678-41d0-9dab-4d6c7c69bad5",
+      "name": "Read Bookings",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "value": "1xOe_hX2RkNKIU3YijZ844SIQ7FsjBEx_78xaXgRMB98",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Bookings",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "id": "18f12a7e-5bb9-40b0-98da-a465e800175c",
+      "name": "Check Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Lets a customer see, change or cancel their own bookings.\n// action: list | check_cancel | cancel | check_change | change\n// A booking is only found if it belongs to the customer's phone number.\nconst q = $('When Called by Agent').first().json;\nconst villas = $('Read Villas').all().map(i => i.json).filter(v => v.Villa_ID);\nconst bookings = $('Read Bookings').all().map(i => i.json).filter(b => b.Booking_ID);\nconst s = v => (v === undefined || v === null) ? '' : String(v).trim();\nconst num = v => { const n = Number(s(v).replace(/[^0-9.]/g, '')); return isNaN(n) ? 0 : n; };\nconst digits = v => s(v).replace(/[^0-9]/g, '');\nconst MON = { jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11 };\nfunction day(v) {\n  const t = s(v); if (!t) return null;\n  let m = t.match(/^(\\d{4})-(\\d{1,2})-(\\d{1,2})/); if (m) return Date.UTC(+m[1], +m[2]-1, +m[3]);\n  m = t.match(/^(\\d{1,2})[\\/.-](\\d{1,2})[\\/.-](\\d{4})/); if (m) return Date.UTC(+m[3], +m[2]-1, +m[1]);\n  m = t.match(/^(\\d{1,2})\\s*([A-Za-z]{3})[A-Za-z]*\\s*(\\d{4})?/); if (m && MON[m[2].toLowerCase()] !== undefined) return Date.UTC(m[3] ? +m[3] : new Date().getUTCFullYear(), MON[m[2].toLowerCase()], +m[1]);\n  return null;\n}\nconst iso = d => new Date(d).toISOString().slice(0, 10);\nconst now = new Date();\nconst today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());\nconst action = s(q.action).toLowerCase();\nconst fail = reason => [{ json: { ok: false, action, reason } }];\n\nconst phone = digits(q.contact);\nif (phone.length < 10) return fail('the phone number used for the booking is missing');\nconst mine = bookings.filter(b => digits(b.Customer_WhatsApp).slice(-10) === phone.slice(-10));\nconst active = mine.filter(b => s(b.Booked).toLowerCase().startsWith('y') && day(b.Check_Out) !== null && day(b.Check_Out) >= today);\nconst show = b => ({ booking_id: s(b.Booking_ID), villa_name: s(b.Villa_Name), check_in: s(b.Check_In), check_out: s(b.Check_Out), guests: num(b.Guests), nights: num(b.Nights), total_amount_inr: num(b.Total_Amount_INR), payment_status: s(b.Payment_Status) });\n\nif (action === 'list') return [{ json: { ok: true, action, booking_count: active.length, bookings: active.map(show) } }];\n\nconst b = active.find(x => s(x.Booking_ID).toUpperCase() === s(q.booking_id).toUpperCase());\nif (!b) return fail(active.length ? 'no active booking with that Booking ID for this phone number' : 'no active bookings found for this phone number');\nif (day(b.Check_In) <= today) return fail('the stay has already started, so it can only be changed by our team');\n\nif (action === 'check_cancel' || action === 'cancel') {\n  const out = { ok: true, action, booking: show(b) };\n  if (action === 'cancel') out.update = { Booking_ID: s(b.Booking_ID), Booked: 'no', Payment_Status: 'Cancelled' };\n  return [{ json: out }];\n}\n\nif (action !== 'check_change' && action !== 'change') return fail('unknown action');\n// New values: anything not given stays as it was.\nconst vid = s(q.new_villa_id) || s(b.Villa_ID);\nconst ci = day(q.new_check_in) ?? day(b.Check_In);\nconst co = day(q.new_check_out) ?? day(b.Check_Out);\nconst guests = num(q.new_guests) || num(b.Guests);\nconst v = villas.find(x => s(x.Villa_ID).toUpperCase() === vid.toUpperCase());\nconst problems = [];\nlet nights = null;\nif (ci === null || co === null) problems.push('the new dates are not clear');\nelse {\n  nights = Math.round((co - ci) / 86400000);\n  if (nights < 1) problems.push('check-out must be after check-in');\n  if (ci < today) problems.push('the new check-in date is in the past');\n}\nif (!v) problems.push('that villa was not found');\nelse {\n  if (s(v.Booking_Status).toLowerCase() !== 'available') problems.push('the villa is not available for booking');\n  if (num(v.Max_Guests) < guests) problems.push('the villa fits only ' + num(v.Max_Guests) + ' guests');\n  if (nights >= 1) {\n    const af = day(v.Available_From), at = day(v.Available_To);\n    if (af !== null && ci < af) problems.push('the villa is only available from ' + iso(af));\n    if (at !== null && co > at) problems.push('the villa is only available until ' + iso(at));\n    if (nights < num(v.Minimum_Nights)) problems.push('the minimum stay is ' + num(v.Minimum_Nights) + ' nights');\n    const clash = bookings.some(o => s(o.Booking_ID) !== s(b.Booking_ID)\n      && s(o.Villa_ID).toUpperCase() === s(v.Villa_ID).toUpperCase()\n      && s(o.Booked).toLowerCase().startsWith('y')\n      && day(o.Check_In) !== null && day(o.Check_Out) !== null\n      && day(o.Check_In) < co && day(o.Check_Out) > ci);\n    if (clash) problems.push('the villa is already booked for these dates');\n  }\n}\nif (problems.length) return fail(problems.join('; '));\nconst total = num(v.Nightly_Rate_INR) * nights;\nconst after = { booking_id: s(b.Booking_ID), villa_name: s(v.Villa_Name), check_in: iso(ci), check_out: iso(co), guests, nights, total_amount_inr: total };\nconst out = { ok: true, action, before: show(b), after, price_difference_inr: total - num(b.Total_Amount_INR) };\nif (action === 'change') out.update = { Booking_ID: s(b.Booking_ID), Villa_ID: s(v.Villa_ID), Villa_Name: s(v.Villa_Name), Check_In: iso(ci), Check_Out: iso(co), Guests: guests, Nights: nights, Total_Amount_INR: total };\nreturn [{ json: out }];\n"
+      }
+    },
+    {
+      "id": "6851a26e-67f3-43d3-a7d1-e46ca2dee982",
+      "name": "Save Change?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "67c72586-2404-4a12-bf3e-782550f41778",
+              "leftValue": "={{ $json.update }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "aa5cac05-7802-460e-a917-7969a5a3b4cb",
+      "name": "Prepare Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        -100
+      ],
+      "parameters": {
+        "jsCode": "// Only the columns that change.\nreturn [{ json: $('Check Request').first().json.update }];"
+      }
+    },
+    {
+      "id": "90f0f3ff-abe1-4792-9554-57e9a89ebbca",
+      "name": "Update Booking",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1320,
+        -100
+      ],
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1xOe_hX2RkNKIU3YijZ844SIQ7FsjBEx_78xaXgRMB98",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Bookings",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "Booking_ID"
+          ],
+          "schema": [
+            {
+              "id": "Booking_ID",
+              "displayName": "Booking_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Booked_At",
+              "displayName": "Booked_At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer_Name",
+              "displayName": "Customer_Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer_WhatsApp",
+              "displayName": "Customer_WhatsApp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Guests",
+              "displayName": "Guests",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Villa_ID",
+              "displayName": "Villa_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Villa_Name",
+              "displayName": "Villa_Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Check_In",
+              "displayName": "Check_In",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Check_Out",
+              "displayName": "Check_Out",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Nights",
+              "displayName": "Nights",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total_Amount_INR",
+              "displayName": "Total_Amount_INR",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Payment_Status",
+              "displayName": "Payment_Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Booked",
+              "displayName": "Booked",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "df73eee9-c071-4ed2-bd3c-53b88efaf2c3",
+      "name": "Alert Team (Slack)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1540,
+        -100
+      ],
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "={{ $('Check Request').item.json.action === 'cancel' ? '*Booking cancelled by customer*' : '*Booking changed by customer*' }} ({{ $('When Called by Agent').item.json.channel || 'whatsapp' }})\nBooking ID: {{ $('Check Request').item.json.update.Booking_ID }}\nCustomer phone: {{ $('When Called by Agent').item.json.contact }}\n{{ $('Check Request').item.json.action === 'cancel' ? 'Villa: ' + $('Check Request').item.json.booking.villa_name + '\\nDates: ' + $('Check Request').item.json.booking.check_in + ' to ' + $('Check Request').item.json.booking.check_out + '\\nAmount: Rs ' + $('Check Request').item.json.booking.total_amount_inr + '\\nPayment status: Cancelled (check if a refund is due)' : 'Before: ' + $('Check Request').item.json.before.villa_name + ', ' + $('Check Request').item.json.before.check_in + ' to ' + $('Check Request').item.json.before.check_out + ', ' + $('Check Request').item.json.before.guests + ' guests, Rs ' + $('Check Request').item.json.before.total_amount_inr + '\\nAfter: ' + $('Check Request').item.json.after.villa_name + ', ' + $('Check Request').item.json.after.check_in + ' to ' + $('Check Request').item.json.after.check_out + ', ' + $('Check Request').item.json.after.guests + ' guests, Rs ' + $('Check Request').item.json.after.total_amount_inr + '\\nDifference: Rs ' + $('Check Request').item.json.price_difference_inr }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      }
+    },
+    {
+      "id": "e6e48e37-df6b-4ad8-93e4-84b4558d22e1",
+      "name": "Done",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        -100
+      ],
+      "parameters": {
+        "jsCode": "// Tells the AI agent the change was saved.\nconst r = { ...$('Check Request').first().json, saved: true };\ndelete r.update;\nreturn [{ json: r }];"
+      }
+    },
+    {
+      "id": "d80b771c-93e0-4052-a506-e9778a1ca5b3",
+      "name": "Return Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        100
+      ],
+      "parameters": {
+        "jsCode": "// Nothing to save (list, a check, or refused). Returns the result.\nreturn [{ json: $('Check Request').first().json }];"
+      }
+    }
+  ],
+  "connections": {
+    "When Called by Agent": {
+      "main": [
+        [
+          {
+            "node": "Read Villas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Villas": {
+      "main": [
+        [
+          {
+            "node": "Read Bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Bookings": {
+      "main": [
+        [
+          {
+            "node": "Check Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Request": {
+      "main": [
+        [
+          {
+            "node": "Save Change?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Change?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Update",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Update": {
+      "main": [
+        [
+          {
+            "node": "Update Booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Booking": {
+      "main": [
+        [
+          {
+            "node": "Alert Team (Slack)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Team (Slack)": {
+      "main": [
+        [
+          {
+            "node": "Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

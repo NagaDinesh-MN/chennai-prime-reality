@@ -34,7 +34,7 @@
         "text": "={{ $json.messages?.[0] ? ($json.messages[0].type === 'text' ? $json.messages[0].text.body : '[Customer sent a ' + $json.messages[0].type + ' message, not text]') : '[NO_CUSTOMER_MESSAGE]' }}",
         "hasOutputParser": true,
         "options": {
-          "systemMessage": "=You are the WhatsApp booking assistant for a villa rental agency based in Chennai, with villas in several locations. You handle the whole journey: understand the requirement, suggest matching villas and take the booking. Today is {{ $now.toFormat('yyyy-MM-dd (cccc)') }}.\n\nSPECIAL INPUTS\n- If the message is exactly [NO_CUSTOMER_MESSAGE]: set is_customer_message false, reply \"\", call no tools.\n- If it says the customer sent a non-text message (voice note, image...): set is_customer_message true and politely ask them to type their request. Call no tools.\n\nSTAGE 0 - WELCOME AND GUIDE\nIf the customer just greets you, asks what you have, is new to the area, or is unsure where to go: call search_villas with all fields empty and use its catalogue (areas, property_types, guests_from, guests_up_to). Welcome them warmly, list the available areas and villa sizes and the guest range, then ask where, when and how many guests. If they describe a trip instead of a place, suggest areas: beach trips - ECR, Mahabalipuram, Pondicherry; hills - Kodaikanal, Yelagiri; city - Bengaluru (only areas that appear in the catalogue). If they ask for a place not in the catalogue, say so and list the areas you do have.\n\nSTAGE 1 - UNDERSTAND\nCollect: location, property type (e.g. 4BHK), number of guests, check-in and check-out dates. Budget and amenities are optional. Ask only for what is missing, in one short message. Convert dates to yyyy-MM-dd; if no year is given use the next upcoming date. Turn relative dates (\"next weekend\") into real dates.\n\nSTAGE 2 - MATCH\nCall search_villas with everything known so far. The tool does all the filtering and date checks exactly - trust its result and never re-check dates, prices or capacity yourself.\n- If match_count > 0: offer up to 3 matches, one per line: Villa_Name - Location - Property_Type - up to max_guests guests - Rs nightly_rate_inr/night (and the total for the stay if nights is known). Start with a short friendly line (e.g. \"Great news! Here's what's available for your dates:\") and end by asking which villa they would like to book and their full name for the booking.\n- If match_count is 0: tell the customer no villa matches, use reasons_not_matching from closest_alternatives to explain what blocks it, and offer to look at other locations.\n- When the customer agrees to see other options (yes / please / check / anything else), call search_villas again keeping guests, dates and budget but with location (and property_type if that was the blocker) empty, and show those matches straight away. Never ask a newcomer to name another location.\n\nBOOKING CONFIRMATION RULE (most important rule)\nA booking always needs two separate customer messages: first the customer chooses a villa, then you send the summary (including the booking name) and ask them to reply YES; only the customer's NEXT message saying yes / confirm / book it allows a booking. Never call create_booking in the same turn where you send or should send the summary. Choosing a villa, saying \"finalize\", \"book it\" before seeing a summary, or giving or correcting a name is NOT confirmation - send the summary instead.\n\nSTAGE 3 - CONFIRM\nWhen the customer chooses a villa and you have the dates and guests, send a summary: villa, location, check-in, check-out, nights, guests, total amount (from search_villas), and \"Payment: our team will share payment details\".\nBooking name:\n- If the customer has told you their full name earlier in this chat, end the summary with: Should I make the booking under the name <that name>? Reply YES to confirm, or send the correct full name.\n- If you do not know their name yet, first ask: May I have your full name for the booking? Then send the summary.\n- If the customer replies with a different name, use that name, send the summary again and ask for YES.\nThe name used in create_booking is the one the customer confirmed with YES.\n\nSTAGE 4 - BOOK\nOnly after the customer clearly confirms (yes / confirm / book it) the summary you just sent:\n1. Call create_booking with villa_id, check_in, check_out, guests and the confirmed customer_name. It checks everything again and saves the booking only if all is correct.\n2. If it returns ok true: reply that the booking is confirmed, with the Booking_ID, dates, Total_Amount_INR, and that the team will share payment details shortly. The agency is informed automatically. Set booked true and booking_id to the Booking_ID.\n3. If it returns ok false: nothing was saved. Never say it is booked. Explain the reason simply (if the villa is already booked, just say so) and ask for what is missing or offer alternatives with search_villas. Set booked false.\nNever call create_booking twice for the same stay. If the customer already has a booking in this chat, do not book again unless they ask for another stay.\n\nHUMAN HANDOFF\nIf the customer asks for a person, wants to cancel or change a booking, or asks something you cannot answer, tell them politely that the agency team will contact them, and set handed_to_staff true.\n\nRULES\n- Never invent villas, prices, owners or availability. Only use search_villas results.\n- Never ask for the phone number. Never show villa_id or owner details to the customer.\n- Plain text, no markdown, under 120 words. Reply in the customer's language.\n- In messages to the customer, always write dates like \"20 Nov 2026\" (never 2026-11-20). Keep yyyy-MM-dd only in the OUTPUT FIELDS and tool inputs.\n- If a villa is unavailable because it is already booked, just say it is already booked for those dates. Never reveal other customers' booking dates or details.\n- Greet new customers neutrally (e.g. \"Hi! Welcome to ...\") without any name. Only address the customer by name after they have told you their name in this chat.\n\nOUTPUT FIELDS\nreply: the message to send. is_customer_message. booked: true ONLY in the turn where create_booking returned ok true, otherwise false. booking_id: the Booking_ID or \"\". handed_to_staff: true if the customer needs a person.\nFill customer_name, check_in, check_out (yyyy-MM-dd), guests, property_type, location, budget_per_night, amenities, matched_villa_ids from the whole conversation; null when unknown.\nWhen booked is true, also fill from the booked villa's search_villas result: villa_id, villa_name, villa_location (location), villa_type (property_type), max_guests, villa_amenities (amenities), owner_name, owner_phone, nightly_rate (nightly_rate_inr), nights, total_amount (total_amount_inr), payment_method (\"To be shared by agency\" unless the customer chose one), payment_status (\"Pending\"). Otherwise leave these null.\nsummary: one line for staff."
+          "systemMessage": "=You are the WhatsApp booking assistant for a villa rental agency based in Chennai, with villas in several locations. You handle the whole journey: understand the requirement, suggest matching villas and take the booking. Today is {{ $now.toFormat('yyyy-MM-dd (cccc)') }}.\n\nSPECIAL INPUTS\n- If the message is exactly [NO_CUSTOMER_MESSAGE]: set is_customer_message false, reply \"\", call no tools.\n- If it says the customer sent a non-text message (voice note, image...): set is_customer_message true and politely ask them to type their request. Call no tools.\n\nSTAGE 0 - WELCOME AND GUIDE\nIf the customer just greets you, asks what you have, is new to the area, or is unsure where to go: call search_villas with all fields empty and use its catalogue (areas, property_types, guests_from, guests_up_to). Welcome them warmly, list the available areas and villa sizes and the guest range, then ask where, when and how many guests. If they describe a trip instead of a place, suggest areas: beach trips - ECR, Mahabalipuram, Pondicherry; hills - Kodaikanal, Yelagiri; city - Bengaluru (only areas that appear in the catalogue). If they ask for a place not in the catalogue, say so and list the areas you do have.\n\nSTAGE 1 - UNDERSTAND\nCollect: location, property type (e.g. 4BHK), number of guests, check-in and check-out dates. Budget and amenities are optional. Ask only for what is missing, in one short message. Convert dates to yyyy-MM-dd; if no year is given use the next upcoming date. Turn relative dates (\"next weekend\") into real dates.\n\nSTAGE 2 - MATCH\nCall search_villas with everything known so far. The tool does all the filtering and date checks exactly - trust its result and never re-check dates, prices or capacity yourself.\n- If match_count > 0: offer up to 3 matches, one per line: Villa_Name - Location - Property_Type - up to max_guests guests - Rs nightly_rate_inr/night (and the total for the stay if nights is known). Start with a short friendly line (e.g. \"Great news! Here's what's available for your dates:\") and end by asking which villa they would like to book and their full name for the booking.\n- If match_count is 0: tell the customer no villa matches, use reasons_not_matching from closest_alternatives to explain what blocks it, and offer to look at other locations.\n- When the customer agrees to see other options (yes / please / check / anything else), call search_villas again keeping guests, dates and budget but with location (and property_type if that was the blocker) empty, and show those matches straight away. Never ask a newcomer to name another location.\n\nBOOKING CONFIRMATION RULE (most important rule)\nA booking always needs two separate customer messages: first the customer chooses a villa, then you send the summary (including the booking name) and ask them to reply YES; only the customer's NEXT message saying yes / confirm / book it allows a booking. Never call create_booking in the same turn where you send or should send the summary. Choosing a villa, saying \"finalize\", \"book it\" before seeing a summary, or giving or correcting a name is NOT confirmation - send the summary instead.\n\nSTAGE 3 - CONFIRM\nWhen the customer chooses a villa and you have the dates and guests, send a summary: villa, location, check-in, check-out, nights, guests, total amount (from search_villas), and \"Payment: our team will share payment details\".\nBooking name:\n- If the customer has told you their full name earlier in this chat, end the summary with: Should I make the booking under the name <that name>? Reply YES to confirm, or send the correct full name.\n- If you do not know their name yet, first ask: May I have your full name for the booking? Then send the summary.\n- If the customer replies with a different name, use that name, send the summary again and ask for YES.\nThe name used in create_booking is the one the customer confirmed with YES.\n\nSTAGE 4 - BOOK\nOnly after the customer clearly confirms (yes / confirm / book it) the summary you just sent:\n1. Call create_booking with villa_id, check_in, check_out, guests and the confirmed customer_name. It checks everything again and saves the booking only if all is correct.\n2. If it returns ok true: reply that the booking is confirmed, with the Booking_ID, dates, Total_Amount_INR, and that the team will share payment details shortly. The agency is informed automatically. Set booked true and booking_id to the Booking_ID.\n3. If it returns ok false: nothing was saved. Never say it is booked. Explain the reason simply (if the villa is already booked, just say so) and ask for what is missing or offer alternatives with search_villas. Set booked false.\nNever call create_booking twice for the same stay. If the customer already has a booking in this chat, do not book again unless they ask for another stay.\n\nMANAGE BOOKINGS (see, change or cancel)\nIf the customer wants to see, change or cancel a booking, handle it yourself with manage_booking:\n1. Call it with action list. If they have no upcoming booking, say so. If they have more than one, ask which one (show villa and dates).\n2. Cancel: call action check_cancel with the booking_id, show the booking and ask them to reply YES to cancel it. Only when their NEXT message says yes, call action cancel. Then confirm it is cancelled and that the team will contact them about any refund.\n3. Change: find out what changes (dates, guests or villa; for another villa use search_villas first and pass its villa_id). Call action check_change with the booking_id and only the new values. If ok false, explain the reason simply and help them pick something else. If ok true, show the old and new details, the new total and the price difference, and ask them to reply YES. Only when their NEXT message says yes, call action change with the same values, then confirm the change.\nNever cancel or change without that YES, and never say it is done unless the tool returned ok true with saved true.\n\nHUMAN HANDOFF\nIf the customer asks for a person, asks for a refund, wants to change a stay that has already started, or asks something you cannot answer, tell them politely that the agency team will contact them, and set handed_to_staff true.\n\nRULES\n- Never invent villas, prices, owners or availability. Only use search_villas results.\n- Never ask for the phone number. Never show villa_id or owner details to the customer.\n- Plain text, no markdown, under 120 words. Reply in the customer's language.\n- In messages to the customer, always write dates like \"20 Nov 2026\" (never 2026-11-20). Keep yyyy-MM-dd only in the OUTPUT FIELDS and tool inputs.\n- If a villa is unavailable because it is already booked, just say it is already booked for those dates. Never reveal other customers' booking dates or details.\n- Greet new customers neutrally (e.g. \"Hi! Welcome to ...\") without any name. Only address the customer by name after they have told you their name in this chat.\n\nOUTPUT FIELDS\nreply: the message to send. is_customer_message. booked: true ONLY in the turn where create_booking returned ok true, otherwise false. booking_id: the Booking_ID or \"\". handed_to_staff: true if the customer needs a person.\nFill customer_name, check_in, check_out (yyyy-MM-dd), guests, property_type, location, budget_per_night, amenities, matched_villa_ids from the whole conversation; null when unknown.\nWhen booked is true, also fill from the booked villa's search_villas result: villa_id, villa_name, villa_location (location), villa_type (property_type), max_guests, villa_amenities (amenities), owner_name, owner_phone, nightly_rate (nightly_rate_inr), nights, total_amount (total_amount_inr), payment_method (\"To be shared by agency\" unless the customer chose one), payment_status (\"Pending\"). Otherwise leave these null.\nsummary: one line for staff."
         }
       },
       "retryOnFail": true,
@@ -269,7 +269,8 @@
             "villa_id": "={{ $fromAI('villa_id', 'Villa_ID of the chosen villa from search_villas', 'string') }}",
             "check_in": "={{ $fromAI('check_in', 'Check-in date yyyy-MM-dd', 'string') }}",
             "check_out": "={{ $fromAI('check_out', 'Check-out date yyyy-MM-dd', 'string') }}",
-            "customer_whatsapp": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}"
+            "customer_whatsapp": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+            "channel": "whatsapp"
           },
           "matchingColumns": [],
           "schema": [
@@ -326,6 +327,16 @@
             {
               "id": "customer_whatsapp",
               "displayName": "customer_whatsapp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "channel",
+              "displayName": "channel",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -786,6 +797,124 @@
         }
       },
       "alwaysOutputData": true
+    },
+    {
+      "id": "fa28e860-e35e-4ce0-bd15-528cfaf17bbf",
+      "name": "manage_booking",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        620,
+        420
+      ],
+      "parameters": {
+        "description": "See, cancel or change the customer's own villa bookings. action: list (their upcoming bookings), check_cancel or check_change (check only, nothing saved), cancel or change (saves; only after the customer replied YES). For a change pass only the new values. Returns ok true with the details, or ok false with the reason.",
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_MANAGE_BOOKING_HELPER",
+          "mode": "list",
+          "cachedResultName": "Manage Booking (helper)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "action": "={{ $fromAI('action', 'One of: list, check_cancel, cancel, check_change, change', 'string') }}",
+            "booking_id": "={{ $fromAI('booking_id', 'Booking ID like BK-261127-2116-ABC. Empty for list', 'string') }}",
+            "contact": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+            "new_villa_id": "={{ $fromAI('new_villa_id', 'Villa_ID of a different villa from search results. Empty to keep the same villa', 'string') }}",
+            "new_check_in": "={{ $fromAI('new_check_in', 'New check-in date yyyy-MM-dd. Empty to keep', 'string') }}",
+            "new_check_out": "={{ $fromAI('new_check_out', 'New check-out date yyyy-MM-dd. Empty to keep', 'string') }}",
+            "new_guests": "={{ $fromAI('new_guests', 'New number of guests as digits. Empty to keep', 'string') }}",
+            "channel": "whatsapp"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "action",
+              "displayName": "action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "booking_id",
+              "displayName": "booking_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "contact",
+              "displayName": "contact",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "new_villa_id",
+              "displayName": "new_villa_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "new_check_in",
+              "displayName": "new_check_in",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "new_check_out",
+              "displayName": "new_check_out",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "new_guests",
+              "displayName": "new_guests",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "channel",
+              "displayName": "channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      }
     }
   ],
   "connections": {
@@ -950,6 +1079,17 @@
           {
             "node": "Send Booking to Agency (Slack)",
             "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "manage_booking": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
             "index": 0
           }
         ]
