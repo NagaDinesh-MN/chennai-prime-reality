@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Search, ShieldCheck, Award, Users, TrendingUp, ArrowRight, Building2, Home as HomeIcon, MapPin, Briefcase } from "lucide-react";
 import heroImg from "@/assets/hero-chennai.jpg";
-import { featured } from "@/data/properties";
+import { featured, locations } from "@/data/properties";
 import { PropertyCard } from "@/components/site/PropertyCard";
 import { SectionHead } from "@/components/site/SectionHead";
 import { EnquiryForm } from "@/components/site/EnquiryForm";
@@ -69,7 +69,7 @@ function HomePage() {
                 <option>Property Type</option><option>Apartment</option><option>Villa</option><option>Plot</option><option>Commercial</option>
               </select>
               <select className="input-field !border-0 !bg-transparent border-l">
-                <option>Location</option><option>OMR</option><option>ECR</option><option>Anna Nagar</option><option>Velachery</option><option>Porur</option>
+                <option>Location</option>{locations.map(l => <option key={l}>{l}</option>)}
               </select>
               <input value={q} onChange={e => setQ(e.target.value)} placeholder="Budget (e.g. ₹1 Cr)" className="input-field !border-0 !bg-transparent" />
               <Link to="/properties" className="btn-navy"><Search className="h-4 w-4" /> Search</Link>

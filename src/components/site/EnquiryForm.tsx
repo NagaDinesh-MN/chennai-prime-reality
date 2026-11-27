@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { CheckCircle2, Phone, Mail } from "lucide-react";
+import { locations } from "@/data/properties";
 
 const schema = z.object({
   name: z.string().trim().min(2, "Name is required").max(80),
@@ -168,12 +169,7 @@ export function EnquiryForm({ compact = false }: { compact?: boolean }) {
         <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Preferred Location</label>
         <select name="location" required className="input-field mt-1.5">
           <option value="">Select area</option>
-          <option>OMR</option>
-          <option>ECR</option>
-          <option>Anna Nagar</option>
-          <option>Velachery</option>
-          <option>Porur</option>
-          <option>Adyar</option>
+          {locations.map(l => <option key={l}>{l}</option>)}
           <option>Other</option>
         </select>
       </div>
