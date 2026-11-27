@@ -2,7 +2,7 @@
   "name": "Save Chat Lead (helper)",
   "nodes": [
     {
-      "id": "54400814-af21-4515-bb0b-63d8b7acdaaf",
+      "id": "a3a1c248-11cc-43bf-88ab-d4d77f96bdfb",
       "name": "When Called by Agent",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
@@ -54,7 +54,7 @@
       }
     },
     {
-      "id": "20252767-679a-4987-8f7b-f788c3307d03",
+      "id": "1e691f4b-81a1-4328-b2c5-8bd501ec8160",
       "name": "Check Lead",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -67,7 +67,7 @@
       }
     },
     {
-      "id": "d0e5c297-6b2c-49a6-86f4-896c51dad17c",
+      "id": "b21cf912-6a6d-45e6-884d-37b6f172fbaf",
       "name": "Lead OK?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -85,7 +85,7 @@
           },
           "conditions": [
             {
-              "id": "2f24ec1a-6f47-49b7-9915-8ee2203e290c",
+              "id": "fc77dcd8-1c2d-4d71-bf86-f54b484a81fc",
               "leftValue": "={{ $json.ok }}",
               "rightValue": "",
               "operator": {
@@ -102,7 +102,7 @@
       }
     },
     {
-      "id": "a8dc20ef-6030-4be3-9e4c-3dd607712393",
+      "id": "219abb02-424b-4e95-98a5-37b9ae6d8e1e",
       "name": "Save Chat Lead",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
@@ -267,7 +267,7 @@
       }
     },
     {
-      "id": "c33280c8-7dca-4eec-b358-be013c21c60c",
+      "id": "f8418f8f-a0db-48fb-a302-dd7994f5e1e1",
       "name": "Alert Team (Slack)",
       "type": "n8n-nodes-base.slack",
       "typeVersion": 2.3,
@@ -290,7 +290,7 @@
       }
     },
     {
-      "id": "7ea161e7-f9b5-4027-ab55-09393ab6abb1",
+      "id": "976ed012-76f7-4b94-8f54-994ef4ccadfa",
       "name": "Lead Saved",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -303,7 +303,7 @@
       }
     },
     {
-      "id": "52d3de5a-3281-4c42-b836-21101fcced91",
+      "id": "cd7d2018-c90c-42dc-8e40-4776b5e1de6c",
       "name": "Lead Refused",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,

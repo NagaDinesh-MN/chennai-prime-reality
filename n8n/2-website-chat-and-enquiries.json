@@ -622,7 +622,7 @@
       "maxTries": 2
     },
     {
-      "id": "9602cfde-e2a9-4d1e-b7f4-dc0babf94f33",
+      "id": "b17a1c3f-093e-4565-be95-4e9e8eb9d1a0",
       "name": "save_lead",
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2.2,
@@ -642,7 +642,7 @@
         "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "name": "={{ $fromAI('name', 'Visitor's full name', 'string') }}",
+            "name": "={{ $fromAI('name', 'Full name of the visitor', 'string') }}",
             "phone": "={{ $fromAI('phone', 'Visitor phone number as they typed it', 'string') }}",
             "email": "={{ $fromAI('email', 'Email if given, else empty', 'string') }}",
             "interest": "={{ $fromAI('interest', 'buy or rent', 'string') }}",
