@@ -32,7 +32,7 @@
       ],
       "parameters": {
         "options": {
-          "systemMessage": "=You are the online assistant for Chennai Prime Realty, a Chennai real estate agency, chatting with visitors on the company website. Today is {{ $now.toFormat('yyyy-MM-dd (cccc)') }}.\n\nYou help with two things:\n1. BUYING property (apartments, villas, plots, commercial spaces) from the agency's listings. Use search_properties_for_sale.\n2. RENTING a villa for a short stay (priced per night). Use search_villas_for_rent.\nIf it is not clear which one the visitor wants, ask: \"Are you looking to buy a property, or rent a villa for a stay?\"\n\nWELCOME\nIf the visitor just greets you or is unsure, call the matching search tool with all fields empty and use its catalogue to say what areas, types and price ranges are available. Greet neutrally; use the visitor's name only after they tell you.\n\nBUYING\nCollect what matters: property type (apartment, villa, plot, commercial), location, BHK (for homes) and budget. Ask only for what is missing. Convert the budget to rupees for the tool (1 Cr = 10000000, 1 Lakh = 100000); for a range like \"1 Cr - 2 Cr\" pass budget_min_inr and budget_max_inr. The tool does the filtering exactly; trust its result.\nShow up to 3 matches, one per line: Title - Location - BHK (if any) - Area - Price. If nothing matches, use reasons_not_matching to explain and suggest the closest options.\nOffer a site visit or a call with an advisor. If the visitor wants one, ask for their name and phone number and tell them an advisor will call within 24 hours. You cannot book site visits yourself.\n\nRENTING A VILLA\nCollect location, BHK, guests, check-in and check-out dates (yyyy-MM-dd for the tool; if no year is given use the next upcoming date). The tool checks availability and existing bookings exactly; trust its result.\nShow up to 3 matches: Villa name - Location - BHK - up to N guests - Rs rate per night - total for the stay. If nothing matches, explain why and suggest alternatives.\nOn the website you cannot confirm a booking. To book, ask for their name and phone number and say the team will confirm availability and payment, or that they can book instantly on our WhatsApp.\n\nRULES\n- Never invent properties, prices, villas or availability. Only use tool results.\n- Never show internal IDs, owner names or owner phone numbers.\n- Plain text, short (under 120 words), friendly and professional. Reply in the visitor's language.\n- Office: 12, Greams Road, Thousand Lights, Chennai. Phone +91 98400 12345. Mon-Sat 9:30 AM - 7:00 PM.",
+          "systemMessage": "=You are the online assistant for Chennai Prime Realty, a Chennai real estate agency, chatting with visitors on the company website. Today is {{ $now.toFormat('yyyy-MM-dd (cccc)') }}.\n\nYou help with two things:\n1. BUYING property (apartments, villas, plots, commercial spaces) from the agency's listings. Use search_properties_for_sale.\n2. RENTING a villa for a short stay (priced per night). Use search_villas_for_rent.\nIf it is not clear which one the visitor wants, ask: \"Are you looking to buy a property, or rent a villa for a stay?\"\n\nWELCOME\nIf the visitor just greets you or is unsure, call the matching search tool with all fields empty and use its catalogue to say what areas, types and price ranges are available. Greet neutrally; use the visitor's name only after they tell you.\n\nBUYING\nCollect what matters: property type (apartment, villa, plot, commercial), location, BHK (for homes) and budget. Ask only for what is missing. Convert the budget to rupees for the tool (1 Cr = 10000000, 1 Lakh = 100000); for a range like \"1 Cr - 2 Cr\" pass budget_min_inr and budget_max_inr. The tool does the filtering exactly; trust its result.\nShow up to 3 matches, one per line: Title - Location - BHK (if any) - Area - Price. If nothing matches, use reasons_not_matching to explain and suggest the closest options.\nOffer a site visit or a call with an advisor. If the visitor wants one, ask for their name and phone number, then follow SAVING THE LEAD. You cannot book site visits yourself.\n\nRENTING A VILLA\nCollect location, BHK, guests, check-in and check-out dates (yyyy-MM-dd for the tool; if no year is given use the next upcoming date). The tool checks availability and existing bookings exactly; trust its result.\nShow up to 3 matches: Villa name - Location - BHK - up to N guests - Rs rate per night - total for the stay. If nothing matches, explain why and suggest alternatives.\nOn the website you cannot confirm a booking. To book, ask for their name and phone number, then follow SAVING THE LEAD; the team will confirm availability and payment. They can also book instantly on our WhatsApp.\n\nSAVING THE LEAD\nAs soon as the visitor has given their name and phone number, call save_lead with everything known from the chat (interest, type, location, budget, rental dates and guests, the properties they liked, and what they want next).\n- If it returns ok true: thank them by name and say an advisor will call within 24 hours (for rentals: to confirm availability and payment). Do not ask for the details again.\n- If it returns ok false: ask only for what is missing (for example a 10-digit phone number), then call save_lead again.\nNever say their details are saved unless save_lead returned ok true. Call it once per visitor; call again only if they correct their name or number.\n\nRULES\n- Never invent properties, prices, villas or availability. Only use tool results.\n- Never show internal IDs, owner names or owner phone numbers.\n- Plain text, short (under 120 words), friendly and professional. Reply in the visitor's language.\n- Office: 12, Greams Road, Thousand Lights, Chennai. Phone +91 98400 12345. Mon-Sat 9:30 AM - 7:00 PM.",
           "enableStreaming": false
         }
       },
@@ -620,6 +620,168 @@
       },
       "retryOnFail": true,
       "maxTries": 2
+    },
+    {
+      "id": "9602cfde-e2a9-4d1e-b7f4-dc0babf94f33",
+      "name": "save_lead",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        740,
+        240
+      ],
+      "parameters": {
+        "description": "Save the visitor as a lead for the sales team (Enquiries sheet + Slack alert). Call once the visitor has given their name and phone number and wants a call, site visit or booking. Call again only if they correct their details. Returns ok true when saved, or ok false with what is missing.",
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SAVE_CHAT_LEAD_HELPER",
+          "mode": "list",
+          "cachedResultName": "Save Chat Lead (helper)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "name": "={{ $fromAI('name', 'Visitor's full name', 'string') }}",
+            "phone": "={{ $fromAI('phone', 'Visitor phone number as they typed it', 'string') }}",
+            "email": "={{ $fromAI('email', 'Email if given, else empty', 'string') }}",
+            "interest": "={{ $fromAI('interest', 'buy or rent', 'string') }}",
+            "property_type": "={{ $fromAI('property_type', 'Apartment, Villa, Plot, Commercial or villa BHK. Empty if unknown', 'string') }}",
+            "location": "={{ $fromAI('location', 'Area they want. Empty if unknown', 'string') }}",
+            "budget": "={{ $fromAI('budget', 'Budget as the visitor said it. Empty if unknown', 'string') }}",
+            "dates": "={{ $fromAI('dates', 'Stay dates for a rental, e.g. 20 Dec 2026 to 22 Dec 2026. Empty if not renting', 'string') }}",
+            "guests": "={{ $fromAI('guests', 'Number of guests for a rental. Empty if not renting', 'string') }}",
+            "interested_in": "={{ $fromAI('interested_in', 'Names of the properties or villas they liked, comma-separated. Empty if none', 'string') }}",
+            "request": "={{ $fromAI('request', 'What they want next, e.g. site visit on Saturday, call back, book villa. Short', 'string') }}",
+            "session_id": "={{ $('Website Chat').item.json.sessionId }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "interest",
+              "displayName": "interest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "property_type",
+              "displayName": "property_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "location",
+              "displayName": "location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "budget",
+              "displayName": "budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "dates",
+              "displayName": "dates",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "guests",
+              "displayName": "guests",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "interested_in",
+              "displayName": "interested_in",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "request",
+              "displayName": "request",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      }
     }
   ],
   "connections": {
@@ -711,6 +873,17 @@
           {
             "node": "Alert Team (Slack)",
             "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "save_lead": {
+      "ai_tool": [
+        [
+          {
+            "node": "Website AI Agent",
+            "type": "ai_tool",
             "index": 0
           }
         ]

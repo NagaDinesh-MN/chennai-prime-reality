@@ -1,0 +1,388 @@
+{
+  "name": "Save Chat Lead (helper)",
+  "nodes": [
+    {
+      "id": "54400814-af21-4515-bb0b-63d8b7acdaaf",
+      "name": "When Called by Agent",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "name"
+            },
+            {
+              "name": "phone"
+            },
+            {
+              "name": "email"
+            },
+            {
+              "name": "interest"
+            },
+            {
+              "name": "property_type"
+            },
+            {
+              "name": "location"
+            },
+            {
+              "name": "budget"
+            },
+            {
+              "name": "dates"
+            },
+            {
+              "name": "guests"
+            },
+            {
+              "name": "interested_in"
+            },
+            {
+              "name": "request"
+            },
+            {
+              "name": "session_id"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "20252767-679a-4987-8f7b-f788c3307d03",
+      "name": "Check Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Checks a lead from the website chat before it is saved.\nconst q = $('When Called by Agent').first().json;\nconst s = v => (v === undefined || v === null) ? '' : String(v).trim();\nconst name = s(q.name);\nconst digits = s(q.phone).replace(/[^0-9]/g, '');\nconst email = s(q.email);\nconst problems = [];\nif (name.length < 2) problems.push(\"the visitor's name is missing\");\nif (digits.length < 10 || digits.length > 13) problems.push('a valid phone number (10 digits, or with country code) is missing');\nif (email && !/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email)) problems.push('the email address looks wrong');\nif (problems.length) return [{ json: { ok: false, reason: problems.join('; ') } }];\nconst phone = digits.length === 10 ? '+91 ' + digits : (digits.length === 12 && digits.startsWith('91')) ? '+91 ' + digits.slice(2) : '+' + digits;\nconst interest = s(q.interest).toLowerCase().includes('rent') ? 'rent a villa' : 'buy property';\nconst parts = [\n  'Wants to ' + interest,\n  s(q.dates) && 'Dates: ' + s(q.dates),\n  s(q.guests) && 'Guests: ' + s(q.guests),\n  s(q.request) && 'Request: ' + s(q.request),\n  email && 'Email: ' + email,\n].filter(Boolean);\nreturn [{ json: {\n  ok: true,\n  enquiry_id: 'chat:' + (s(q.session_id) || Date.now()),\n  received_at: $now.toISO(),\n  source: 'website chat',\n  customer_name: name,\n  contact: phone,\n  message: parts.join(' | '),\n  property_type: s(q.property_type),\n  location: s(q.location),\n  budget: s(q.budget),\n  matching_villa_ids: s(q.interested_in),\n  enquiry_status: 'new',\n  response_status: 'follow_up_needed',\n  requires_human_followup: 'true',\n  interest,\n  email,\n} }];\n"
+      }
+    },
+    {
+      "id": "d0e5c297-6b2c-49a6-86f4-896c51dad17c",
+      "name": "Lead OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2f24ec1a-6f47-49b7-9915-8ee2203e290c",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "a8dc20ef-6030-4be3-9e4c-3dd607712393",
+      "name": "Save Chat Lead",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        660,
+        -100
+      ],
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1xOe_hX2RkNKIU3YijZ844SIQ7FsjBEx_78xaXgRMB98",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Enquiries",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "enquiry_id": "={{ $json.enquiry_id }}",
+            "received_at": "={{ $json.received_at }}",
+            "source": "={{ $json.source }}",
+            "customer_name": "={{ $json.customer_name }}",
+            "contact": "={{ $json.contact }}",
+            "message": "={{ $json.message }}",
+            "property_type": "={{ $json.property_type }}",
+            "location": "={{ $json.location }}",
+            "budget": "={{ $json.budget }}",
+            "matching_villa_ids": "={{ $json.matching_villa_ids }}",
+            "enquiry_status": "={{ $json.enquiry_status }}",
+            "response_status": "={{ $json.response_status }}",
+            "requires_human_followup": "={{ $json.requires_human_followup }}"
+          },
+          "matchingColumns": [
+            "enquiry_id"
+          ],
+          "schema": [
+            {
+              "id": "enquiry_id",
+              "displayName": "enquiry_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "received_at",
+              "displayName": "received_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "customer_name",
+              "displayName": "customer_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "contact",
+              "displayName": "contact",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "property_type",
+              "displayName": "property_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "location",
+              "displayName": "location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "budget",
+              "displayName": "budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "matching_villa_ids",
+              "displayName": "matching_villa_ids",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "enquiry_status",
+              "displayName": "enquiry_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "response_status",
+              "displayName": "response_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "requires_human_followup",
+              "displayName": "requires_human_followup",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c33280c8-7dca-4eec-b358-be013c21c60c",
+      "name": "Alert Team (Slack)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        880,
+        -100
+      ],
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=*New lead from the website chat*\nName: {{ $('Check Lead').item.json.customer_name }}\nPhone: {{ $('Check Lead').item.json.contact }}\nEmail: {{ $('Check Lead').item.json.email || '-' }}\nWants to: {{ $('Check Lead').item.json.interest }}\nType: {{ $('Check Lead').item.json.property_type || '-' }} | Location: {{ $('Check Lead').item.json.location || '-' }} | Budget: {{ $('Check Lead').item.json.budget || '-' }}\nInterested in: {{ $('Check Lead').item.json.matching_villa_ids || '-' }}\nDetails: {{ $('Check Lead').item.json.message }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      }
+    },
+    {
+      "id": "7ea161e7-f9b5-4027-ab55-09393ab6abb1",
+      "name": "Lead Saved",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        -100
+      ],
+      "parameters": {
+        "jsCode": "// Tells the AI agent the lead was saved.\nreturn [{ json: { ok: true, saved_as: $('Check Lead').first().json.enquiry_id } }];"
+      }
+    },
+    {
+      "id": "52d3de5a-3281-4c42-b836-21101fcced91",
+      "name": "Lead Refused",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        100
+      ],
+      "parameters": {
+        "jsCode": "// Nothing was saved. Returns the reason to the AI agent.\nreturn [{ json: $('Check Lead').first().json }];"
+      }
+    }
+  ],
+  "connections": {
+    "When Called by Agent": {
+      "main": [
+        [
+          {
+            "node": "Check Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Lead": {
+      "main": [
+        [
+          {
+            "node": "Lead OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead OK?": {
+      "main": [
+        [
+          {
+            "node": "Save Chat Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Lead Refused",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Chat Lead": {
+      "main": [
+        [
+          {
+            "node": "Alert Team (Slack)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Team (Slack)": {
+      "main": [
+        [
+          {
+            "node": "Lead Saved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}
