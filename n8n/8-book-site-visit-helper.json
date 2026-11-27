@@ -1,0 +1,391 @@
+{
+  "name": "Book Site Visit (helper)",
+  "nodes": [
+    {
+      "id": "7bca0388-faa5-4e77-9e47-818c964de1ee",
+      "name": "When Called by Agent",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "name"
+            },
+            {
+              "name": "phone"
+            },
+            {
+              "name": "property"
+            },
+            {
+              "name": "date"
+            },
+            {
+              "name": "time"
+            },
+            {
+              "name": "notes"
+            },
+            {
+              "name": "channel"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "1f3c4369-2278-483f-bb67-c0f5f9af2a5f",
+      "name": "Read Site Visits",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "value": "1xOe_hX2RkNKIU3YijZ844SIQ7FsjBEx_78xaXgRMB98",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Site_Visits",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "id": "0d5d7195-b6d9-43dd-b936-20db3c038268",
+      "name": "Check Visit",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Checks and prepares a site visit booking. Nothing is saved unless every check passes.\n// Office hours: Monday to Saturday, 9:30 AM to 6:30 PM (India time).\nconst q = $('When Called by Agent').first().json;\nconst visits = $('Read Site Visits').all().map(i => i.json).filter(v => v.Visit_ID);\nconst s = v => (v === undefined || v === null) ? '' : String(v).trim();\nconst problems = [];\nconst name = s(q.name);\nlet phone = s(q.phone).replace(/[^0-9]/g, '');\nif (phone.length === 10) phone = '91' + phone;\nconst property = s(q.property);\nif (name.length < 2) problems.push(\"the visitor's name is missing\");\nif (phone.length < 11 || phone.length > 13) problems.push('a valid phone number (10 digits) is missing');\nif (!property) problems.push('which property to visit is missing');\nconst dm = s(q.date).match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);\nconst tm = s(q.time).toUpperCase().replace(/\\s+/g, '').match(/^(\\d{1,2})(?::(\\d{2}))?(AM|PM)?$/);\nlet when = null, hh = 0, mm = 0;\nif (!dm) problems.push('the visit date is missing (yyyy-MM-dd)');\nif (!tm) problems.push('the visit time is missing (e.g. 11:00 AM)');\nif (dm && tm) {\n  hh = +tm[1]; mm = +(tm[2] || 0);\n  if (tm[3] === 'PM' && hh < 12) hh += 12;\n  if (tm[3] === 'AM' && hh === 12) hh = 0;\n  when = Date.UTC(+dm[1], +dm[2] - 1, +dm[3], hh, mm) - 5.5 * 3600000; // IST -> UTC\n  const dow = new Date(Date.UTC(+dm[1], +dm[2] - 1, +dm[3])).getUTCDay();\n  const mins = hh * 60 + mm;\n  if (when < Date.now() + 60 * 60000) problems.push('the visit must be at least 1 hour from now');\n  if (dow === 0) problems.push('site visits are not available on Sundays');\n  if (mins < 9 * 60 + 30 || mins > 18 * 60 + 30) problems.push('site visits are between 9:30 AM and 6:30 PM');\n}\nconst pad = n => String(n).padStart(2, '0');\nconst date = dm ? dm[0] : '';\nconst time = pad(hh) + ':' + pad(mm);\nif (!problems.length) {\n  const nt = t => { const m = s(t).match(/(\\d{1,2}):(\\d{2})/); return m ? pad(+m[1]) + ':' + m[2] : s(t); };\n  const clash = visits.some(v => s(v.Status).toLowerCase() !== 'cancelled' && s(v.Property).toLowerCase() === property.toLowerCase() && s(v.Visit_Date).slice(0, 10) === date && nt(v.Visit_Time) === time);\n  if (clash) problems.push('that time slot is already taken for this property, please choose another time');\n}\nif (problems.length) return [{ json: { ok: false, reason: problems.join('; ') } }];\nconst local = new Date(Date.now() + 5.5 * 3600000);\nconst stamp = String(local.getUTCFullYear()).slice(2) + pad(local.getUTCMonth() + 1) + pad(local.getUTCDate()) + '-' + pad(local.getUTCHours()) + pad(local.getUTCMinutes());\nconst used = new Set(visits.map(v => s(v.Visit_ID)));\nlet id;\ndo { id = 'SV-' + stamp + '-' + Math.random().toString(36).slice(2, 5).toUpperCase(); } while (used.has(id));\nconst h12 = ((hh + 11) % 12 + 1) + ':' + pad(mm) + (hh < 12 ? ' AM' : ' PM');\nreturn [{ json: {\n  ok: true,\n  Visit_ID: id,\n  Booked_At: local.toISOString().slice(0, 16).replace('T', ' '),\n  Customer_Name: name,\n  Customer_Phone: phone,\n  Property: property,\n  Visit_Date: date,\n  Visit_Time: time,\n  Visit_Time_Label: h12,\n  Notes: s(q.notes),\n  Channel: s(q.channel) || 'whatsapp',\n  Status: 'Scheduled',\n} }];\n"
+      }
+    },
+    {
+      "id": "cc4007cd-f3d2-414f-ac3b-6ca3c293abf0",
+      "name": "Visit OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a6196d46-1486-46d7-82e7-fd8ffd31ad37",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "af9985ee-ec0f-4c3c-96b6-fd3c6fe2bc0b",
+      "name": "Prepare Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        -100
+      ],
+      "parameters": {
+        "jsCode": "// Only the sheet columns.\nconst v = $('Check Visit').first().json;\nreturn [{ json: { Visit_ID: v.Visit_ID, Booked_At: v.Booked_At, Customer_Name: v.Customer_Name, Customer_Phone: v.Customer_Phone, Property: v.Property, Visit_Date: v.Visit_Date, Visit_Time: v.Visit_Time, Notes: v.Notes, Channel: v.Channel, Status: v.Status } }];"
+      }
+    },
+    {
+      "id": "44fbb066-4050-402a-836c-5b1185c7ac26",
+      "name": "Save Site Visit",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1100,
+        -100
+      ],
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1xOe_hX2RkNKIU3YijZ844SIQ7FsjBEx_78xaXgRMB98",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Site_Visits",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Visit_ID",
+              "displayName": "Visit_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Booked_At",
+              "displayName": "Booked_At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer_Name",
+              "displayName": "Customer_Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer_Phone",
+              "displayName": "Customer_Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Property",
+              "displayName": "Property",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Visit_Date",
+              "displayName": "Visit_Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Visit_Time",
+              "displayName": "Visit_Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "47e4ccd2-5dd7-4c3d-83e1-dc5f4a927625",
+      "name": "Alert Team (Slack)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1320,
+        -100
+      ],
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=*New site visit booked* ({{ $('Check Visit').item.json.Channel }})\nVisit ID: {{ $('Check Visit').item.json.Visit_ID }}\nProperty: {{ $('Check Visit').item.json.Property }}\nDate: {{ DateTime.fromISO($('Check Visit').item.json.Visit_Date).toFormat('ccc, d LLL yyyy') }} at {{ $('Check Visit').item.json.Visit_Time_Label }}\nCustomer: {{ $('Check Visit').item.json.Customer_Name }} (+{{ $('Check Visit').item.json.Customer_Phone }})\nNotes: {{ $('Check Visit').item.json.Notes || '-' }}\nPlease assign an advisor to meet them at the property.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      }
+    },
+    {
+      "id": "4e260698-72b2-471c-a654-9c0e71273bfd",
+      "name": "Visit Booked",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        -100
+      ],
+      "parameters": {
+        "jsCode": "// Tells the AI agent the visit is booked.\nconst v = $('Check Visit').first().json;\nreturn [{ json: { ok: true, Visit_ID: v.Visit_ID, Property: v.Property, Visit_Date: v.Visit_Date, Visit_Time: v.Visit_Time_Label } }];"
+      }
+    },
+    {
+      "id": "59e9f86b-05b6-4f37-984e-50e885f19fae",
+      "name": "Visit Refused",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        100
+      ],
+      "parameters": {
+        "jsCode": "// Nothing was saved. Returns the reason to the AI agent.\nreturn [{ json: $('Check Visit').first().json }];"
+      }
+    }
+  ],
+  "connections": {
+    "When Called by Agent": {
+      "main": [
+        [
+          {
+            "node": "Read Site Visits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Site Visits": {
+      "main": [
+        [
+          {
+            "node": "Check Visit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Visit": {
+      "main": [
+        [
+          {
+            "node": "Visit OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Visit OK?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Visit Refused",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Row": {
+      "main": [
+        [
+          {
+            "node": "Save Site Visit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Site Visit": {
+      "main": [
+        [
+          {
+            "node": "Alert Team (Slack)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Team (Slack)": {
+      "main": [
+        [
+          {
+            "node": "Visit Booked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

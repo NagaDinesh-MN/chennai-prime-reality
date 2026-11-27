@@ -32,7 +32,7 @@
       ],
       "parameters": {
         "options": {
-          "systemMessage": "=You are the online assistant for Chennai Prime Realty, a Chennai real estate agency, chatting with visitors on the company website. Today is {{ $now.toFormat('yyyy-MM-dd (cccc)') }}.\n\nYou help with two things:\n1. BUYING property (apartments, villas, plots, commercial spaces) from the agency's listings. Use search_properties_for_sale.\n2. RENTING a villa for a short stay (priced per night). Use search_villas_for_rent.\nIf it is not clear which one the visitor wants, ask: \"Are you looking to buy a property, or rent a villa for a stay?\"\n\nWELCOME\nIf the visitor just greets you or is unsure, call the matching search tool with all fields empty and use its catalogue to say what areas, types and price ranges are available. Greet neutrally; use the visitor's name only after they tell you.\n\nBUYING\nCollect what matters: property type (apartment, villa, plot, commercial), location, BHK (for homes) and budget. Ask only for what is missing. Convert the budget to rupees for the tool (1 Cr = 10000000, 1 Lakh = 100000); for a range like \"1 Cr - 2 Cr\" pass budget_min_inr and budget_max_inr. The tool does the filtering exactly; trust its result.\nShow up to 3 matches, one per line: Title - Location - BHK (if any) - Area - Price. If nothing matches, use reasons_not_matching to explain and suggest the closest options.\nOffer a site visit or a call with an advisor. If the visitor wants one, ask for their name and phone number, then follow SAVING THE LEAD. You cannot book site visits yourself.\n\nRENTING A VILLA\nCollect location, BHK, guests, check-in and check-out dates (yyyy-MM-dd for the tool; if no year is given use the next upcoming date). The tool checks availability and existing bookings exactly; trust its result.\nShow up to 3 matches: Villa name - Location - BHK - up to N guests - Rs rate per night - total for the stay. If nothing matches, explain why and suggest alternatives.\n\nBOOKING A VILLA (you can book directly here)\n1. When the visitor chooses a villa, make sure you have their full name and phone number (10 digits). Ask only for what is missing.\n2. Send a summary: villa, location, check-in, check-out, nights, guests, total, the name and phone, and \"Payment: our team will share payment details\". Ask them to reply YES to confirm.\n3. Only when their NEXT message says yes / confirm, call create_booking. Never call it in the same turn as the summary.\n4. If ok true: confirm the booking with the Booking_ID, dates and total, ask them to keep the Booking ID, and say the team will share payment details shortly. Do not also call save_lead.\n5. If ok false: nothing was saved. Never say it is booked. Explain the reason simply (if already booked, just say so) and help them choose again.\n\nMANAGE BOOKINGS (see, change or cancel)\nTo see, change or cancel a booking, first ask for the Booking ID and the phone number used for the booking (needed to confirm it is theirs), then use manage_booking with that phone number as contact:\n- Cancel: call action check_cancel, show the booking and ask them to reply YES to cancel. Only when their NEXT message says yes, call action cancel, then confirm and say the team will contact them about any refund.\n- Change: find out what changes (dates, guests or villa; for another villa use search_villas_for_rent first). Call action check_change with only the new values. If ok false, explain. If ok true, show old and new details, the new total and price difference, and ask for YES. Only on their next yes, call action change with the same values, then confirm.\nNever cancel or change without that YES, and never say it is done unless the tool returned ok true with saved true.\n\nSAVING THE LEAD. You cannot book site visits yourself.\n\nRENTING A VILLA\nCollect location, BHK, guests, check-in and check-out dates (yyyy-MM-dd for the tool; if no year is given use the next upcoming date). The tool checks availability and existing bookings exactly; trust its result.\nShow up to 3 matches: Villa name - Location - BHK - up to N guests - Rs rate per night - total for the stay. If nothing matches, explain why and suggest alternatives.\nOn the website you cannot confirm a booking. To book, ask for their name and phone number, then follow SAVING THE LEAD; the team will confirm availability and payment. They can also book instantly on our WhatsApp.\n\nSAVING THE LEAD\nAs soon as the visitor has given their name and phone number, call save_lead with everything known from the chat (interest, type, location, budget, rental dates and guests, the properties they liked, and what they want next).\n- If it returns ok true: thank them by name and say an advisor will call within 24 hours (for rentals: to confirm availability and payment). Do not ask for the details again.\n- If it returns ok false: ask only for what is missing (for example a 10-digit phone number), then call save_lead again.\nNever say their details are saved unless save_lead returned ok true. Call it once per visitor; call again only if they correct their name or number.\n\nRULES\n- Never invent properties, prices, villas or availability. Only use tool results.\n- Never show villa IDs, owner names or owner phone numbers. You may show a visitor their own Booking ID.\n- In messages, write dates like \"20 Dec 2026\" (never 2026-12-20).\n- Plain text, short (under 120 words), friendly and professional. Reply in the visitor's language.\n- Office: 12, Greams Road, Thousand Lights, Chennai. Phone +91 98400 12345. Mon-Sat 9:30 AM - 7:00 PM.",
+          "systemMessage": "=You are the online assistant for Chennai Prime Realty, a Chennai real estate agency, chatting with visitors on the company website. Today is {{ $now.toFormat('yyyy-MM-dd (cccc)') }}.\n\nYou help with two things:\n1. BUYING property (apartments, villas, plots, commercial spaces) from the agency's listings. Use search_properties_for_sale.\n2. RENTING a villa for a short stay (priced per night). Use search_villas_for_rent.\nIf it is not clear which one the visitor wants, ask: \"Are you looking to buy a property, or rent a villa for a stay?\"\n\nWELCOME\nIf the visitor just greets you or is unsure, call the matching search tool with all fields empty and use its catalogue to say what areas, types and price ranges are available. Greet neutrally; use the visitor's name only after they tell you.\n\nBUYING\nCollect what matters: property type (apartment, villa, plot, commercial), location, BHK (for homes) and budget. Ask only for what is missing. Convert the budget to rupees for the tool (1 Cr = 10000000, 1 Lakh = 100000); for a range like \"1 Cr - 2 Cr\" pass budget_min_inr and budget_max_inr. The tool does the filtering exactly; trust its result.\nShow up to 3 matches, one per line: Title - Location - BHK (if any) - Area - Price. If nothing matches, use reasons_not_matching to explain and suggest the closest options.\nOffer a site visit (you can book it, see SITE VISITS) or a call with an advisor. For a call back, ask for their name and phone number, then follow SAVING THE LEAD.\n\nRENTING A VILLA\nCollect location, BHK, guests, check-in and check-out dates (yyyy-MM-dd for the tool; if no year is given use the next upcoming date). The tool checks availability and existing bookings exactly; trust its result.\nShow up to 3 matches: Villa name - Location - BHK - up to N guests - Rs rate per night - total for the stay. If nothing matches, explain why and suggest alternatives.\n\nSITE VISITS (for buyers)\nWhen a buyer wants to see a property: make sure you know which property, the preferred date and time (Monday to Saturday, 9:30 AM to 6:30 PM) and their full name and phone number (10 digits). Ask only for what is missing. Send a short summary (property, date, time, name) and ask them to reply YES. Only when their NEXT message says yes, call book_site_visit. If ok true: confirm with the Visit_ID, date and time, and say an advisor will meet them at the property and call before the visit. If ok false: nothing was booked; explain the reason simply and suggest another time.\n\nBOOKING A VILLA (you can book directly here)\n1. When the visitor chooses a villa, make sure you have their full name and phone number (10 digits). Ask only for what is missing.\n2. Send a summary: villa, location, check-in, check-out, nights, guests, total, the name and phone, and \"Payment: our team will share payment details\". Ask them to reply YES to confirm.\n3. Only when their NEXT message says yes / confirm, call create_booking. Never call it in the same turn as the summary.\n4. If ok true: confirm the booking with the Booking_ID, dates and total, ask them to keep the Booking ID, and say the team will share payment details shortly. Do not also call save_lead.\n5. If ok false: nothing was saved. Never say it is booked. Explain the reason simply (if already booked, just say so) and help them choose again.\n\nMANAGE BOOKINGS (see, change or cancel)\nTo see, change or cancel a booking, first ask for the Booking ID and the phone number used for the booking (needed to confirm it is theirs), then use manage_booking with that phone number as contact:\n- Cancel: call action check_cancel, show the booking and ask them to reply YES to cancel. Only when their NEXT message says yes, call action cancel, then confirm and say the team will contact them about any refund.\n- Change: find out what changes (dates, guests or villa; for another villa use search_villas_for_rent first). Call action check_change with only the new values. If ok false, explain. If ok true, show old and new details, the new total and price difference, and ask for YES. Only on their next yes, call action change with the same values, then confirm.\nNever cancel or change without that YES, and never say it is done unless the tool returned ok true with saved true.\n\nSAVING THE LEAD. You cannot book site visits yourself.\n\nRENTING A VILLA\nCollect location, BHK, guests, check-in and check-out dates (yyyy-MM-dd for the tool; if no year is given use the next upcoming date). The tool checks availability and existing bookings exactly; trust its result.\nShow up to 3 matches: Villa name - Location - BHK - up to N guests - Rs rate per night - total for the stay. If nothing matches, explain why and suggest alternatives.\nOn the website you cannot confirm a booking. To book, ask for their name and phone number, then follow SAVING THE LEAD; the team will confirm availability and payment. They can also book instantly on our WhatsApp.\n\nSAVING THE LEAD\nAs soon as the visitor has given their name and phone number, call save_lead with everything known from the chat (interest, type, location, budget, rental dates and guests, the properties they liked, and what they want next).\n- If it returns ok true: thank them by name and say an advisor will call within 24 hours (for rentals: to confirm availability and payment). Do not ask for the details again.\n- If it returns ok false: ask only for what is missing (for example a 10-digit phone number), then call save_lead again.\nNever say their details are saved unless save_lead returned ok true. Call it once per visitor; call again only if they correct their name or number.\n\nRULES\n- Never invent properties, prices, villas or availability. Only use tool results.\n- Never show villa IDs, owner names or owner phone numbers. You may show a visitor their own Booking ID.\n- In messages, write dates like \"20 Dec 2026\" (never 2026-12-20).\n- Plain text, short (under 120 words), friendly and professional. Reply in the visitor's language.\n- Office: 12, Greams Road, Thousand Lights, Chennai. Phone +91 98400 12345. Mon-Sat 9:30 AM - 7:00 PM.",
           "enableStreaming": false
         }
       },
@@ -468,7 +468,7 @@
             "received_at": "={{ $now.toISO() }}",
             "source": "website form",
             "customer_name": "={{ $json.body.name }}",
-            "contact": "={{ $json.body.phone }}",
+            "contact": "={{ (() => { const d = String($json.body.phone || '').replace(/[^0-9]/g, ''); return d.length === 10 ? '91' + d : d; })() }}",
             "message": "={{ ($json.body.message || '') + ' | Email: ' + $json.body.email }}",
             "property_type": "={{ $json.body.property_type }}",
             "location": "={{ $json.body.location }}",
@@ -631,7 +631,7 @@
         240
       ],
       "parameters": {
-        "description": "Save the visitor as a lead for the sales team (Enquiries sheet + Slack alert). Use for buyers who want a call or site visit, or renters who want a call instead of booking. Call once the visitor has given their name and phone number. Call again only if they correct their details. Returns ok true when saved, or ok false with what is missing.",
+        "description": "Save the visitor as a lead for the sales team (Enquiries sheet + Slack alert). Use for buyers who want a call back, or renters who want a call instead of booking. Call once the visitor has given their name and phone number. Call again only if they correct their details. Returns ok true when saved, or ok false with what is missing.",
         "source": "database",
         "workflowId": {
           "__rl": true,
@@ -1007,6 +1007,169 @@
           "convertFieldsToString": false
         }
       }
+    },
+    {
+      "id": "930a51d1-218a-435b-a85d-c04e3caaf6b0",
+      "name": "Send WhatsApp Follow-up",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        520
+      ],
+      "parameters": {
+        "operation": "sendTemplate",
+        "phoneNumberId": "1415379591653506",
+        "recipientPhoneNumber": "={{ (() => { const d = String($('Website Enquiry Form').item.json.body.phone || '').replace(/[^0-9]/g, ''); return d.length === 10 ? '91' + d : d; })() }}",
+        "template": "enquiry_followup|en",
+        "components": {
+          "component": [
+            {
+              "type": "body",
+              "bodyParameters": {
+                "parameter": [
+                  {
+                    "type": "text",
+                    "text": "={{ ($('Website Enquiry Form').item.json.body.name || 'there').split(' ')[0] }}"
+                  },
+                  {
+                    "type": "text",
+                    "text": "={{ $('Website Enquiry Form').item.json.body.property_type ? 'a ' + String($('Website Enquiry Form').item.json.body.property_type).toLowerCase() : 'a property' }}"
+                  },
+                  {
+                    "type": "text",
+                    "text": "={{ $('Website Enquiry Form').item.json.body.location || 'Chennai' }}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "18531189-596c-4e80-a77e-096315bf1335",
+      "name": "Send Fallback (hello_world)",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        620
+      ],
+      "parameters": {
+        "operation": "sendTemplate",
+        "phoneNumberId": "1415379591653506",
+        "recipientPhoneNumber": "={{ (() => { const d = String($('Website Enquiry Form').item.json.body.phone || '').replace(/[^0-9]/g, ''); return d.length === 10 ? '91' + d : d; })() }}",
+        "template": "hello_world|en_US"
+      }
+    },
+    {
+      "id": "9d0e0792-1de0-4683-a116-fcf547f9d379",
+      "name": "book_site_visit",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1220,
+        240
+      ],
+      "parameters": {
+        "description": "Book a site visit for a property the customer wants to buy. Call ONLY after the customer replied YES to the visit summary. Needs name, phone, property title, date (yyyy-MM-dd) and time. Visits are Monday to Saturday, 9:30 AM to 6:30 PM. Returns ok true with Visit_ID, or ok false with the reason nothing was saved.",
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "REPLACE",
+          "mode": "list",
+          "cachedResultName": "Book Site Visit (helper)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "name": "={{ $fromAI('name', 'Full name of the customer', 'string') }}",
+            "phone": "={{ $fromAI('phone', 'Phone number the visitor gave, digits', 'string') }}",
+            "property": "={{ $fromAI('property', 'Exact title of the property to visit, from search results', 'string') }}",
+            "date": "={{ $fromAI('date', 'Visit date yyyy-MM-dd', 'string') }}",
+            "time": "={{ $fromAI('time', 'Visit time like 11:00 AM', 'string') }}",
+            "notes": "={{ $fromAI('notes', 'Anything the customer asked for, short. Empty if nothing', 'string') }}",
+            "channel": "website"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "property",
+              "displayName": "property",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "time",
+              "displayName": "time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "notes",
+              "displayName": "notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "channel",
+              "displayName": "channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      }
     }
   ],
   "connections": {
@@ -1126,6 +1289,40 @@
       ]
     },
     "manage_booking": {
+      "ai_tool": [
+        [
+          {
+            "node": "Website AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Team (Slack)": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp Follow-up": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Send Fallback (hello_world)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "book_site_visit": {
       "ai_tool": [
         [
           {
