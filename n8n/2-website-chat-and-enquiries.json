@@ -1009,7 +1009,7 @@
       }
     },
     {
-      "id": "e8e04acc-fd81-46a1-b485-e293fdb0954e",
+      "id": "f166be91-cd3d-4dbc-bd14-e2b9f7c9b978",
       "name": "Send WhatsApp Follow-up",
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
@@ -1049,7 +1049,7 @@
       "onError": "continueErrorOutput"
     },
     {
-      "id": "3147d794-7213-41d4-a7be-b77d19b7c295",
+      "id": "bea255be-eb6d-4168-b806-7462f5dc7024",
       "name": "Send Fallback (hello_world)",
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
@@ -1065,7 +1065,7 @@
       }
     },
     {
-      "id": "32fdd3b4-bcf9-4596-b949-9f9d7c91ab82",
+      "id": "a59ec4fe-545b-4e1a-8a31-bd6bb7e37293",
       "name": "book_site_visit",
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2.2,
@@ -1172,7 +1172,7 @@
       }
     },
     {
-      "id": "5dfd3971-469a-40d0-a3ed-9acedf480c2f",
+      "id": "13c49657-9505-4f28-96e1-9cb242145e3e",
       "name": "Send Personal Message",
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
