@@ -6,6 +6,8 @@ Three workflow files (import the helper first):
 | --- | --- |
 | `1-villa-property-search-helper.json` | Search helper used by the chat. Searches the website's properties for sale and the villa rental sheet (with booking checks). Matching is done in code, not by the AI. |
 | `2-website-chat-and-enquiries.json` | **Website Chat**: the chat widget on the site talks to an AI agent that answers about buying property and renting villas. **Website Enquiry Form**: the site's enquiry form sends each lead here; it is saved to the Enquiries sheet and posted to Slack. |
+| `4-create-booking-helper.json` | Saves a booking for the WhatsApp bot. Before saving it re-checks name, guests, dates, capacity, minimum nights and existing bookings, and creates a unique Booking ID. If anything is wrong it saves nothing and tells the bot why. |
+| `5-error-alerts.json` | Posts a Slack alert whenever any of these workflows fails. |
 | `3-whatsapp-villa-booking-bot.json` | The WhatsApp villa booking bot: understands the request, suggests villas, takes the booking after the customer replies YES, saves it to the Bookings sheet, and sends the full booking to Slack. |
 
 ## Setup (about 15 minutes)
@@ -28,7 +30,11 @@ If either variable is empty, that feature is simply switched off: no chat bubble
 
 ## WhatsApp bot (optional)
 
-Import `3-whatsapp-villa-booking-bot.json`. In **search_villas** pick the helper workflow. Attach credentials: WhatsApp Trigger (WhatsApp OAuth: App ID + App Secret), Reply on WhatsApp (WhatsApp API: permanent access token + Business Account ID, then pick the sender number), OpenAI Chat Model, Google Sheets (create_booking, Save Lead), Slack (pick the channel). Publish. Only one workflow can listen to a WhatsApp number at a time.
+Import `4-create-booking-helper.json` (Google Sheets on Read Villas, Read Bookings, Save Booking; Publish), then `3-whatsapp-villa-booking-bot.json`. In **search_villas** pick the search helper and in **create_booking** pick **Create Booking (helper)**. Attach credentials: WhatsApp Trigger (WhatsApp OAuth: App ID + App Secret), Reply on WhatsApp (WhatsApp API: permanent access token + Business Account ID, then pick the sender number), OpenAI Chat Model, Google Sheets (create_booking, Save Lead), Slack (pick the channel). Publish. Only one workflow can listen to a WhatsApp number at a time.
+
+## Error alerts
+
+Import `5-error-alerts.json`, attach Slack to **Alert Team (Slack)**, pick the channel and Publish. Then in each other workflow open ⋯ → Settings → *Error workflow* → **Error Alerts** → Save.
 
 ## Keeping it in sync
 
